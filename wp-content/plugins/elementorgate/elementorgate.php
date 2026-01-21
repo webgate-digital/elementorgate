@@ -1,0 +1,160 @@
+<?php
+
+/**
+ * Plugin Name: Elementorgate
+ * Description: A collection of power tools for Elementor Editor
+ * Version: 0.0.2
+ * Author: Webgate
+ * Author URI: https://webgate.digital
+ * Text Domain: elementorgate
+ * Requires at least: 6.0
+ * Requires PHP: 7.4
+ */
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+define('EGATE_VERSION', '0.0.2');
+define('EGATE_PLUGIN_DIR', plugin_dir_path(__FILE__));
+define('EGATE_PLUGIN_URL', plugin_dir_url(__FILE__));
+define('EGATE_PLUGIN_FILE', __FILE__);
+
+/**
+ * Main Plugin Class
+ */
+final class Elementorgate
+{
+    private static $instance = null;
+
+    /**
+     * Loaded modules
+     */
+    private $modules = [];
+
+    public static function get_instance()
+    {
+        if (null === self::$instance) {
+            self::$instance = new self();
+        }
+        return self::$instance;
+    }
+
+    private function __construct()
+    {
+        add_action('plugins_loaded', [$this, 'init']);
+    }
+
+    public function init()
+    {
+        if (!did_action('elementor/loaded')) {
+            add_action('admin_notices', [$this, 'elementor_missing_notice']);
+            return;
+        }
+
+        $this->load_modules();
+        add_action('elementor/editor/before_enqueue_scripts', [$this, 'enqueue_editor_assets']);
+    }
+
+    /**
+     * Load all modules
+     */
+    private function load_modules()
+    {
+        // Template Previews Module
+        require_once EGATE_PLUGIN_DIR . 'modules/template-previews/template-previews.php';
+        $this->modules['template-previews'] = EGATE_Template_Previews::get_instance();
+    }
+
+    /**
+     * Get a loaded module
+     */
+    public function get_module($module_name)
+    {
+        return isset($this->modules[$module_name]) ? $this->modules[$module_name] : null;
+    }
+
+    public function enqueue_editor_assets()
+    {
+        wp_enqueue_script(
+            'egate-typography-preview',
+            EGATE_PLUGIN_URL . 'assets/js/typography-preview.js',
+            ['jquery'],
+            EGATE_VERSION,
+            true
+        );
+
+        wp_enqueue_script(
+            'egate-element-tools',
+            EGATE_PLUGIN_URL . 'assets/js/element-tools.js',
+            [],
+            EGATE_VERSION,
+            true
+        );
+
+        wp_enqueue_script(
+            'egate-command-palette',
+            EGATE_PLUGIN_URL . 'assets/js/command-palette.js',
+            [],
+            EGATE_VERSION,
+            true
+        );
+
+        wp_enqueue_script(
+            'egate-spacing-measure',
+            EGATE_PLUGIN_URL . 'assets/js/spacing-measure.js',
+            [],
+            EGATE_VERSION,
+            true
+        );
+
+        wp_enqueue_script(
+            'egate-keyboard-navigation',
+            EGATE_PLUGIN_URL . 'assets/js/keyboard-navigation.js',
+            ['egate-element-tools'],
+            EGATE_VERSION,
+            true
+        );
+
+        wp_enqueue_style(
+            'egate-styles',
+            EGATE_PLUGIN_URL . 'assets/css/power-tools.css',
+            [],
+            EGATE_VERSION
+        );
+    }
+
+    public function elementor_missing_notice()
+    {
+?>
+        <div class="notice notice-warning is-dismissible">
+            <p><?php esc_html_e('Elementorgate requires Elementor to be installed and activated.', 'elementorgate'); ?></p>
+        </div>
+<?php
+    }
+}
+
+function elementorgate_init()
+{
+    return Elementorgate::get_instance();
+}
+
+elementorgate_init();
+
+/**
+ * Plugin activation hook
+ */
+register_activation_hook(EGATE_PLUGIN_FILE, function () {
+    // Load and activate Template Previews module
+    require_once EGATE_PLUGIN_DIR . 'modules/template-previews/template-previews.php';
+    EGATE_Template_Previews::activate();
+});
+
+/**
+ * Plugin deactivation hook
+ */
+register_deactivation_hook(EGATE_PLUGIN_FILE, function () {
+    // Deactivate Template Previews module
+    require_once EGATE_PLUGIN_DIR . 'modules/template-previews/template-previews.php';
+    EGATE_Template_Previews::deactivate();
+});

@@ -30,7 +30,7 @@ services:
       WP_ENVIRONMENT_TYPE: ${WP_ENVIRONMENT_TYPE}
     volumes:
       - wordpress_data:/var/www/html
-      - ./wp-content/plugins/elementor-power-tools:/var/www/html/wp-content/plugins/elementor-power-tools
+      - ./wp-content/plugins/elementorgate:/var/www/html/wp-content/plugins/elementorgate
       - ./uploads.ini:/usr/local/etc/php/conf.d/uploads.ini
 
 volumes:
