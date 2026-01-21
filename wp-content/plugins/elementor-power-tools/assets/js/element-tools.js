@@ -1,0 +1,475 @@
+(function () {
+    'use strict';
+
+    /**
+     * Elementor Element Tools
+     *
+     * Utilities for working with selected elements in Elementor
+     * Usage: window.elementorTools.getSelected()
+     */
+    const ElementTools = {
+        /**
+         * Check if Elementor is ready
+         */
+        isReady: function () {
+            return typeof window.elementor !== 'undefined' &&
+                   typeof window.$e !== 'undefined' &&
+                   !!window.$e.run;
+        },
+
+        /**
+         * Get currently selected elements
+         * @returns {Array} Array of selected element containers
+         */
+        getSelected: function () {
+            if (!this.isReady()) {
+                console.error('Elementor is not ready');
+                return [];
+            }
+
+            const elements = window.elementor.selection.getElements();
+
+            if (elements.length === 0) {
+                console.log('No elements selected');
+                return [];
+            }
+
+            console.log(`Found ${elements.length} selected element(s)`);
+
+            // Return detailed info about each selected element
+            return elements.map(container => this.getElementInfo(container));
+        },
+
+        /**
+         * Get raw selected containers (for internal use)
+         * @returns {Array} Array of ElementorContainer objects
+         */
+        getSelectedContainers: function () {
+            if (!this.isReady()) {
+                return [];
+            }
+            return window.elementor.selection.getElements();
+        },
+
+        /**
+         * Get detailed info about an element container
+         * @param {Object} container - Elementor container object
+         * @returns {Object} Element information
+         */
+        getElementInfo: function (container) {
+            if (!container || !container.model) {
+                return null;
+            }
+
+            const model = container.model;
+            const settings = container.settings?.attributes || {};
+
+            const info = {
+                id: model.id || container.id,
+                elType: model.get('elType'),
+                widgetType: model.get('widgetType') || null,
+                label: this.getElementLabel(container),
+                hasChildren: container.children && container.children.length > 0,
+                childCount: container.children ? container.children.length : 0,
+                parent: container.parent ? {
+                    id: container.parent.model?.id || container.parent.id,
+                    elType: container.parent.model?.get('elType')
+                } : null,
+                container: container // Keep reference to original container
+            };
+
+            // Add widget-specific info
+            if (info.widgetType === 'heading') {
+                info.headingText = settings.title || settings.editor;
+                info.headingTag = settings.header_size || 'h2';
+            } else if (info.widgetType === 'text-editor') {
+                const content = settings.editor || '';
+                info.textContent = content.replace(/<[^>]*>/g, '').trim().substring(0, 100);
+            } else if (info.widgetType === 'button') {
+                info.buttonText = settings.text;
+            } else if (info.widgetType === 'image') {
+                info.imageUrl = settings.image?.url;
+            }
+
+            return info;
+        },
+
+        /**
+         * Get element label/name
+         * @param {Object} container - Elementor container
+         * @returns {string} Element label
+         */
+        getElementLabel: function (container) {
+            const settings = container.settings?.attributes || {};
+
+            return settings._title ||
+                   settings.title ||
+                   settings._element_name ||
+                   settings._label ||
+                   settings.label ||
+                   settings._element_label ||
+                   settings._element_custom_label ||
+                   container.model?.get('widgetType') ||
+                   container.model?.get('elType') ||
+                   'Unknown';
+        },
+
+        /**
+         * Get container by element ID
+         * @param {string} elementId - Element ID
+         * @returns {Object|null} Container object
+         */
+        getContainer: function (elementId) {
+            if (!this.isReady()) {
+                return null;
+            }
+            return window.elementor.getContainer(elementId);
+        },
+
+        /**
+         * Get the preview/document container
+         * @returns {Object|null} Preview container
+         */
+        getPreviewContainer: function () {
+            if (!this.isReady()) {
+                return null;
+            }
+            return window.elementor.getPreviewContainer();
+        },
+
+        /**
+         * Execute an Elementor command
+         * @param {string} command - Command name
+         * @param {Object} options - Command options
+         * @returns {Promise} Command result
+         */
+        runCommand: async function (command, options = {}) {
+            if (!this.isReady()) {
+                throw new Error('Elementor is not ready');
+            }
+            return window.$e.run(command, options);
+        },
+
+        /**
+         * Print selected elements info to console in a nice format
+         */
+        logSelected: function () {
+            const elements = this.getSelected();
+
+            if (elements.length === 0) {
+                return;
+            }
+
+            console.group('Selected Elements');
+            elements.forEach((el, index) => {
+                console.group(`Element ${index + 1}: ${el.label}`);
+                console.log('ID:', el.id);
+                console.log('Type:', el.elType);
+                if (el.widgetType) console.log('Widget:', el.widgetType);
+                console.log('Children:', el.childCount);
+                if (el.parent) console.log('Parent:', el.parent.id, `(${el.parent.elType})`);
+                if (el.headingText) console.log('Text:', el.headingText);
+                if (el.textContent) console.log('Content:', el.textContent);
+                if (el.buttonText) console.log('Button:', el.buttonText);
+                console.groupEnd();
+            });
+            console.groupEnd();
+
+            return elements;
+        },
+
+        /**
+         * Select an element by ID
+         * @param {string} elementId - Element ID to select
+         */
+        selectElement: async function (elementId) {
+            if (!this.isReady()) {
+                console.error('Elementor is not ready');
+                return;
+            }
+
+            const container = this.getContainer(elementId);
+            if (!container) {
+                console.error('Element not found:', elementId);
+                return;
+            }
+
+            await this.runCommand('document/elements/select', {
+                container: container
+            });
+
+            console.log('Selected element:', elementId);
+        },
+
+        /**
+         * Get all elements of a specific type
+         * @param {string} type - Element type (e.g., 'widget', 'container', 'section')
+         * @param {string} widgetType - Optional widget type filter
+         * @returns {Array} Array of matching elements
+         */
+        findElements: function (type, widgetType = null) {
+            if (!this.isReady()) {
+                return [];
+            }
+
+            const preview = this.getPreviewContainer();
+            if (!preview) {
+                return [];
+            }
+
+            const results = [];
+
+            const traverse = (container) => {
+                if (!container) return;
+
+                const elType = container.model?.get('elType');
+                const wType = container.model?.get('widgetType');
+
+                if (elType === type) {
+                    if (!widgetType || wType === widgetType) {
+                        results.push(this.getElementInfo(container));
+                    }
+                }
+
+                if (container.children) {
+                    container.children.forEach(child => traverse(child));
+                }
+            };
+
+            traverse(preview);
+            return results;
+        },
+
+        /**
+         * Get the parent container of selected element(s)
+         * @returns {Object|null} Parent container info
+         */
+        getSelectedParent: function () {
+            const containers = this.getSelectedContainers();
+            if (containers.length === 0) {
+                console.log('No elements selected');
+                return null;
+            }
+
+            const parent = containers[0].parent;
+            if (!parent) {
+                console.log('Selected element has no parent');
+                return null;
+            }
+
+            return this.getElementInfo(parent);
+        },
+
+        /**
+         * Get children of selected element
+         * @returns {Array} Array of child elements
+         */
+        getSelectedChildren: function () {
+            const containers = this.getSelectedContainers();
+            if (containers.length === 0) {
+                console.log('No elements selected');
+                return [];
+            }
+
+            const container = containers[0];
+            if (!container.children || container.children.length === 0) {
+                console.log('Selected element has no children');
+                return [];
+            }
+
+            return container.children.map(child => this.getElementInfo(child));
+        },
+
+        /**
+         * Wrap selected elements in a new container
+         * Similar to "Group" in Figma
+         * @returns {Promise<Object|null>} The new container or null on failure
+         */
+        wrapInContainer: async function () {
+            if (!this.isReady()) {
+                console.error('Elementor is not ready');
+                return null;
+            }
+
+            const containers = this.getSelectedContainers();
+            if (containers.length === 0) {
+                console.error('No elements selected. Please select at least one element.');
+                return null;
+            }
+
+            // All selected elements must have the same parent
+            const parent = containers[0].parent;
+            if (!parent) {
+                console.error('Selected element has no parent');
+                return null;
+            }
+
+            // Verify all elements have the same parent
+            const allSameParent = containers.every(c => c.parent && c.parent.id === parent.id);
+            if (!allSameParent) {
+                console.error('All selected elements must have the same parent to wrap them.');
+                return null;
+            }
+
+            // Get indices of selected elements in parent
+            const parentChildren = parent.children || [];
+            const indices = containers.map(c => {
+                return parentChildren.findIndex(child => child.id === c.id);
+            }).filter(i => i !== -1).sort((a, b) => a - b);
+
+            if (indices.length === 0) {
+                console.error('Could not find selected elements in parent');
+                return null;
+            }
+
+            const insertIndex = indices[0];
+
+            console.log(`Wrapping ${containers.length} element(s) at index ${insertIndex}`);
+
+            try {
+                // Create a new container at the position of the first selected element
+                const newContainer = await this.runCommand('document/elements/create', {
+                    container: parent,
+                    model: {
+                        elType: 'container',
+                        settings: {
+                            _title: 'Wrapper'
+                        }
+                    },
+                    options: {
+                        at: insertIndex
+                    }
+                });
+
+                if (!newContainer) {
+                    console.error('Failed to create new container');
+                    return null;
+                }
+
+                console.log('Created new container:', newContainer.id);
+
+                // Move all selected elements into the new container
+                // We need to move them in reverse order to maintain their relative positions
+                for (let i = containers.length - 1; i >= 0; i--) {
+                    const elementToMove = containers[i];
+
+                    await this.runCommand('document/elements/move', {
+                        container: elementToMove,
+                        target: newContainer,
+                        options: {
+                            at: 0
+                        }
+                    });
+
+                    console.log(`Moved element ${elementToMove.id} into container`);
+                }
+
+                // Select the new container
+                await this.runCommand('document/elements/select', {
+                    container: newContainer
+                });
+
+                console.log('Successfully wrapped elements in new container:', newContainer.id);
+                return this.getElementInfo(newContainer);
+
+            } catch (error) {
+                console.error('Failed to wrap elements:', error);
+                return null;
+            }
+        },
+
+        /**
+         * Unwrap selected container - move children out and delete container
+         * Similar to "Ungroup" in Figma
+         * @returns {Promise<boolean>} Success status
+         */
+        unwrapContainer: async function () {
+            if (!this.isReady()) {
+                console.error('Elementor is not ready');
+                return false;
+            }
+
+            const containers = this.getSelectedContainers();
+            if (containers.length !== 1) {
+                console.error('Please select exactly one container to unwrap');
+                return false;
+            }
+
+            const container = containers[0];
+            const elType = container.model?.get('elType');
+
+            if (elType !== 'container') {
+                console.error('Selected element is not a container');
+                return false;
+            }
+
+            const parent = container.parent;
+            if (!parent) {
+                console.error('Container has no parent');
+                return false;
+            }
+
+            const children = container.children || [];
+            if (children.length === 0) {
+                console.log('Container has no children, just deleting it');
+                await this.runCommand('document/elements/delete', {
+                    container: container
+                });
+                return true;
+            }
+
+            // Find index of container in parent
+            const parentChildren = parent.children || [];
+            const containerIndex = parentChildren.findIndex(c => c.id === container.id);
+
+            try {
+                // Move all children out to parent at container's position
+                // Move in reverse to maintain order
+                for (let i = children.length - 1; i >= 0; i--) {
+                    const child = children[i];
+
+                    await this.runCommand('document/elements/move', {
+                        container: child,
+                        target: parent,
+                        options: {
+                            at: containerIndex
+                        }
+                    });
+
+                    console.log(`Moved element ${child.id} out of container`);
+                }
+
+                // Delete the now-empty container
+                await this.runCommand('document/elements/delete', {
+                    container: container
+                });
+
+                console.log('Successfully unwrapped container');
+                return true;
+
+            } catch (error) {
+                console.error('Failed to unwrap container:', error);
+                return false;
+            }
+        }
+    };
+
+    // Expose to global scope
+    window.elementorTools = ElementTools;
+
+    // Shorthand aliases
+    window.getSelected = function () {
+        return ElementTools.logSelected();
+    };
+
+    // Wrap selected elements in a container (like Figma's Group)
+    window.wrapSelected = function () {
+        return ElementTools.wrapInContainer();
+    };
+
+    // Unwrap/ungroup container
+    window.unwrapSelected = function () {
+        return ElementTools.unwrapContainer();
+    };
+
+})();
