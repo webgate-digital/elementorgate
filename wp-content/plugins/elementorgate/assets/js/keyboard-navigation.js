@@ -20,15 +20,10 @@
          * Initialize keyboard navigation
          */
         init: function () {
-            console.log('[KeyNav] Initializing keyboard navigation...');
             this.createIndicator();
             this.createToast();
             this.bindEvents();
             this.setupSelectionListener();
-            console.log('[KeyNav] Keyboard Navigation initialized');
-            console.log('[KeyNav] Shortcuts: Option/Alt + ↑↓ (siblings), Option/Alt + ←→ (hierarchy)');
-            console.log('[KeyNav] isEnabled:', this.isEnabled);
-            console.log('[KeyNav] isReady:', this.isReady());
         },
 
         /**
@@ -68,8 +63,6 @@
          * Bind keyboard events
          */
         bindEvents: function () {
-            const self = this;
-
             // Attach to main document
             this.attachKeyListener(document);
 
@@ -85,7 +78,6 @@
             const checkInterval = setInterval(() => {
                 const iframe = document.getElementById('elementor-preview-iframe');
                 if (iframe && iframe.contentDocument) {
-                    console.log('[KeyNav] Found iframe, attaching listener');
                     self.attachKeyListener(iframe.contentDocument);
                     clearInterval(checkInterval);
                 }
@@ -97,36 +89,13 @@
          */
         attachKeyListener: function (doc) {
             const self = this;
-            console.log('[KeyNav] Attaching listener to:', doc === document ? 'main document' : 'iframe document');
 
             doc.addEventListener('keydown', function (e) {
-                // Log all keydowns with modifiers for debugging
-                if (e.altKey || e.shiftKey || e.metaKey || e.ctrlKey) {
-                    console.log('[KeyNav] Keydown:', {
-                        key: e.key,
-                        altKey: e.altKey,
-                        shiftKey: e.shiftKey,
-                        metaKey: e.metaKey,
-                        ctrlKey: e.ctrlKey,
-                        isEnabled: self.isEnabled,
-                        isReady: self.isReady()
-                    });
-                }
-
-                if (!self.isEnabled) {
-                    console.log('[KeyNav] Navigation disabled');
-                    return;
-                }
-
-                if (!self.isReady()) {
-                    console.log('[KeyNav] Elementor not ready');
-                    return;
-                }
+                if (!self.isEnabled) return;
+                if (!self.isReady()) return;
 
                 // Only handle Option/Alt + Arrow combinations (no other modifiers)
                 if (!e.altKey || e.shiftKey || e.metaKey || e.ctrlKey) return;
-
-                console.log('[KeyNav] Alt/Option detected, key:', e.key);
 
                 // Don't interfere when typing in inputs
                 const activeElement = document.activeElement;
@@ -136,34 +105,27 @@
                     activeElement.isContentEditable
                 );
 
-                if (isTextInput) {
-                    console.log('[KeyNav] In text input, skipping');
-                    return;
-                }
+                if (isTextInput) return;
 
                 switch (e.key) {
                     case 'ArrowUp':
                         e.preventDefault();
                         e.stopPropagation();
-                        console.log('[KeyNav] Navigating to previous sibling');
                         self.navigateSibling(-1);
                         break;
                     case 'ArrowDown':
                         e.preventDefault();
                         e.stopPropagation();
-                        console.log('[KeyNav] Navigating to next sibling');
                         self.navigateSibling(1);
                         break;
                     case 'ArrowLeft':
                         e.preventDefault();
                         e.stopPropagation();
-                        console.log('[KeyNav] Navigating to parent');
                         self.navigateToParent();
                         break;
                     case 'ArrowRight':
                         e.preventDefault();
                         e.stopPropagation();
-                        console.log('[KeyNav] Navigating to first child');
                         self.navigateToChild();
                         break;
                 }
@@ -315,7 +277,7 @@
                 });
                 this.updateIndicator();
             } catch (error) {
-                console.error('Failed to select element:', error);
+                // Silent fail
             }
         },
 
@@ -405,7 +367,6 @@
          */
         enable: function () {
             this.isEnabled = true;
-            console.log('Keyboard navigation enabled');
         },
 
         /**
@@ -414,7 +375,6 @@
         disable: function () {
             this.isEnabled = false;
             this.hideIndicator();
-            console.log('Keyboard navigation disabled');
         },
 
         /**

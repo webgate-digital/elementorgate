@@ -183,33 +183,25 @@ class EGATE_Settings
         ?>
         <div class="wrap egate-settings-wrap">
             <h1><?php esc_html_e('ElementorGate', 'elementorgate'); ?></h1>
-            <p><?php esc_html_e('Power tools for Elementor Editor. Enable or disable features below.', 'elementorgate'); ?></p>
+            <p><?php esc_html_e('Enable or disable features below.', 'elementorgate'); ?></p>
 
             <form method="post" action="options.php">
                 <?php settings_fields('elementorgate_settings_group'); ?>
 
-                <div class="egate-features-grid">
+                <div class="egate-features-list">
                     <?php foreach ($this->features as $key => $feature) : ?>
-                        <div class="egate-feature-card <?php echo $settings[$key] ? 'is-enabled' : ''; ?>">
-                            <div class="egate-feature-header">
-                                <span class="dashicons <?php echo esc_attr($feature['icon']); ?>"></span>
+                        <div class="egate-feature-item">
+                            <div class="egate-feature-info">
                                 <h3><?php echo esc_html($feature['title']); ?></h3>
+                                <p><?php echo esc_html($feature['description']); ?></p>
                             </div>
-                            <p class="egate-feature-description">
-                                <?php echo esc_html($feature['description']); ?>
-                            </p>
-                            <div class="egate-feature-toggle">
-                                <label class="egate-toggle">
-                                    <input type="checkbox"
-                                           name="<?php echo esc_attr(self::OPTION_NAME . '[' . $key . ']'); ?>"
-                                           value="1"
-                                           <?php checked($settings[$key], true); ?>>
-                                    <span class="egate-toggle-slider"></span>
-                                    <span class="egate-toggle-label">
-                                        <?php echo $settings[$key] ? esc_html__('Enabled', 'elementorgate') : esc_html__('Disabled', 'elementorgate'); ?>
-                                    </span>
-                                </label>
-                            </div>
+                            <label class="egate-toggle">
+                                <input type="checkbox"
+                                       name="<?php echo esc_attr(self::OPTION_NAME . '[' . $key . ']'); ?>"
+                                       value="1"
+                                       <?php checked($settings[$key], true); ?>>
+                                <span class="egate-toggle-slider"></span>
+                            </label>
                         </div>
                     <?php endforeach; ?>
                 </div>

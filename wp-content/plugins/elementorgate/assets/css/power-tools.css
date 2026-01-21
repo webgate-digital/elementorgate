@@ -285,13 +285,12 @@
     transition: background 0.1s;
 }
 
-.efsp-command-palette__item:hover,
-.efsp-command-palette__item--selected {
-    background: #2a2a2a;
+.efsp-command-palette__item:hover {
+    background: linear-gradient(135deg, #e8a8b570 0%, #d4899a57 44%);
 }
 
 .efsp-command-palette__item--selected {
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    background: linear-gradient(135deg, #e8a8b570 0%, #d4899a57 44%);
 }
 
 .efsp-command-palette__item--selected .efsp-command-palette__item-label,
@@ -299,6 +298,7 @@
 .efsp-command-palette__item--selected i {
     color: #fff !important;
 }
+
 
 .efsp-command-palette__item i {
     font-size: 16px;
@@ -314,14 +314,14 @@
 }
 
 .efsp-command-palette__item-label mark {
-    background: rgba(59, 130, 246, 0.3);
-    color: #60a5fa;
+    background: rgba(250, 212, 219, 0.3);
+    color: #FAD4DB;
     border-radius: 2px;
     padding: 0 2px;
 }
 
 .efsp-command-palette__item--selected .efsp-command-palette__item-label mark {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.25);
     color: #fff;
 }
 
@@ -394,8 +394,8 @@
 }
 
 .efsp-command-palette__toggle--active {
-    background: #3b82f6;
-    border-color: #3b82f6;
+    background: #d4899a;
+    border-color: #d4899a;
 }
 
 .efsp-command-palette__toggle-check {
@@ -415,7 +415,7 @@
 }
 
 .efsp-command-palette__item--selected .efsp-command-palette__toggle--active .efsp-command-palette__toggle-check {
-    color: #3b82f6;
+    color: #d4899a;
 }
 
 /* ========================================
@@ -454,8 +454,8 @@
 .efsp-nav-indicator__position {
     font-size: 13px;
     font-weight: 600;
-    color: #fff;
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: #1B2241;
+    background: #FAD4DB;
     padding: 4px 10px;
     border-radius: 4px;
 }

@@ -48,9 +48,205 @@
             // Also handle the typography control's globe icon
             $(document).on('click', '.elementor-control-popover-toggle-toggle', this.onPopoverToggle.bind(this));
 
-            // Tooltip hover events - on the entire row
+            // Tooltip hover events - on the entire row in dropdown
             $(document).on('mouseenter', '.e-global__preview-item.e-global__typography', this.onValueHover.bind(this));
             $(document).on('mouseleave', '.e-global__preview-item.e-global__typography', this.onValueLeave.bind(this));
+
+            // Tooltip hover events - on typography control toggle buttons (globe icon and edit icon)
+            // Target the control wrapper that contains "typography" in its class
+            const self = this;
+            $(document).on('mouseenter', '.e-global__popover-toggle', function(e) {
+                const $control = $(this).closest('.elementor-control');
+                // Check if this is a typography control
+                if ($control.hasClass('elementor-control-typography_typography') ||
+                    $control.attr('class')?.includes('typography')) {
+                    self.onTypographyControlHover.call(self, e);
+                }
+            });
+            $(document).on('mouseleave', '.e-global__popover-toggle', function(e) {
+                const $control = $(this).closest('.elementor-control');
+                if ($control.hasClass('elementor-control-typography_typography') ||
+                    $control.attr('class')?.includes('typography')) {
+                    self.onValueLeave.call(self, e);
+                }
+            });
+            $(document).on('mouseenter', '.elementor-control-popover-toggle-toggle-label', function(e) {
+                const $control = $(this).closest('.elementor-control');
+                if ($control.hasClass('elementor-control-typography_typography') ||
+                    $control.attr('class')?.includes('typography')) {
+                    self.onTypographyControlHover.call(self, e);
+                }
+            });
+            $(document).on('mouseleave', '.elementor-control-popover-toggle-toggle-label', function(e) {
+                const $control = $(this).closest('.elementor-control');
+                if ($control.hasClass('elementor-control-typography_typography') ||
+                    $control.attr('class')?.includes('typography')) {
+                    self.onValueLeave.call(self, e);
+                }
+            });
+        },
+
+        /**
+         * Handle hover on typography control toggle buttons (globe/edit icons)
+         */
+        onTypographyControlHover: function (e) {
+            const target = e.currentTarget;
+            const $control = $(target).closest('.elementor-control');
+
+            if (!$control.length) {
+                return;
+            }
+
+            // Extract the typography setting name from the control class
+            // e.g., "elementor-control-typography_typography" -> "typography_typography"
+            // e.g., "elementor-control-button_typography_typography" -> "button_typography_typography"
+            const controlClass = $control.attr('class') || '';
+            const settingMatch = controlClass.match(/elementor-control-([a-z_]+typography_typography)/i);
+            const settingName = settingMatch ? settingMatch[1] : 'typography_typography';
+
+            // Try to get the global typography ID from the selected element
+            const globalId = this.getActiveGlobalTypography(settingName);
+
+            if (globalId && this.typographyCache && this.typographyCache[globalId]) {
+                const entry = this.typographyCache[globalId];
+                this.showTooltip(target, entry);
+            } else {
+                // Show tooltip with current element's typography values (non-global)
+                this.showCurrentTypographyTooltip(target, settingName);
+            }
+        },
+
+        /**
+         * Try to get the active global typography ID from the selected element
+         * @param {string} settingName - The typography setting name (e.g., 'typography_typography', 'button_typography_typography')
+         */
+        getActiveGlobalTypography: function (settingName) {
+            try {
+                const container = window.elementor?.selection?.getElements()?.[0];
+                if (!container) return null;
+
+                // Try to get globals from container
+                const globals = container.globals;
+                if (globals) {
+                    const typographyGlobal = globals.get ? globals.get(settingName) : globals.attributes?.[settingName];
+                    if (typographyGlobal) {
+                        const match = typographyGlobal.match(/id=([a-z0-9]+)/i);
+                        if (match) {
+                            return match[1];
+                        }
+                    }
+                }
+
+                // Try alternate way via model
+                const model = container.model;
+                if (model) {
+                    const modelGlobals = model.get('globals');
+                    if (modelGlobals && modelGlobals[settingName]) {
+                        const match = modelGlobals[settingName].match(/id=([a-z0-9]+)/i);
+                        if (match) {
+                            return match[1];
+                        }
+                    }
+                }
+
+                // Try settings globals
+                const settings = container.settings;
+                if (settings) {
+                    const settingsGlobals = settings.get ? settings.get('globals') : settings.attributes?.globals;
+                    if (settingsGlobals && settingsGlobals[settingName]) {
+                        const match = settingsGlobals[settingName].match(/id=([a-z0-9]+)/i);
+                        if (match) {
+                            return match[1];
+                        }
+                    }
+                }
+            } catch (err) {
+                // Silent fail
+            }
+            return null;
+        },
+
+        /**
+         * Show tooltip with current (non-global) typography values
+         * @param {Element} target - The element to position tooltip near
+         * @param {string} settingName - The typography setting name (e.g., 'typography_typography', 'button_typography_typography')
+         */
+        showCurrentTypographyTooltip: function (target, settingName) {
+            this.hideTooltip();
+
+            try {
+                // Try to get current typography values from Elementor
+                const container = window.elementor?.selection?.getElements()?.[0];
+                if (!container) return;
+
+                const settings = container.settings?.attributes || {};
+
+                // Determine the prefix for typography settings
+                // e.g., 'typography_typography' -> 'typography_'
+                // e.g., 'button_typography_typography' -> 'button_typography_'
+                const prefix = settingName ? settingName.replace(/_typography$/, '_') : 'typography_';
+
+                // Look for typography settings with the correct prefix
+                const fontSize = settings[prefix + 'font_size'];
+                const fontWeight = settings[prefix + 'font_weight'];
+                const lineHeight = settings[prefix + 'line_height'];
+                const letterSpacing = settings[prefix + 'letter_spacing'];
+                const fontSizeTablet = settings[prefix + 'font_size_tablet'];
+                const fontSizeMobile = settings[prefix + 'font_size_mobile'];
+
+                // Only show if we have some values
+                if (!fontSize && !fontWeight) return;
+
+                const tooltip = document.createElement('div');
+                tooltip.className = 'efsp-tooltip';
+
+                let html = '<div class="efsp-tooltip__header">Current Typography</div>';
+
+                // Typography Properties Section
+                html += '<div class="efsp-tooltip__section">';
+                html += '<div class="efsp-tooltip__section-title"><i class="eicon-typography"></i> Properties</div>';
+                html += this.buildRow('Weight', fontWeight || null);
+                html += this.buildRow('Line Height', this.formatSizeValue(lineHeight));
+                html += this.buildRow('Letter Spacing', this.formatSizeValue(letterSpacing));
+                html += '</div>';
+
+                // Responsive Font Sizes Section
+                html += '<div class="efsp-tooltip__section">';
+                html += '<div class="efsp-tooltip__section-title"><i class="eicon-device-responsive"></i> Font Size</div>';
+                html += '<div class="efsp-tooltip__responsive">';
+                html += this.buildDeviceBox('eicon-device-desktop', this.formatSizeValue(fontSize), 'Desktop');
+                html += this.buildDeviceBox('eicon-device-tablet', this.formatSizeValue(fontSizeTablet), 'Tablet');
+                html += this.buildDeviceBox('eicon-device-mobile', this.formatSizeValue(fontSizeMobile), 'Mobile');
+                html += '</div>';
+                html += '</div>';
+
+                tooltip.innerHTML = html;
+                document.body.appendChild(tooltip);
+
+                // Position tooltip
+                const rect = target.getBoundingClientRect();
+                const tooltipRect = tooltip.getBoundingClientRect();
+
+                let left = rect.left - tooltipRect.width - 10;
+                let top = rect.top + (rect.height / 2) - (tooltipRect.height / 2);
+
+                if (left < 10) {
+                    left = rect.right + 10;
+                }
+                if (top < 10) {
+                    top = 10;
+                }
+                if (top + tooltipRect.height > window.innerHeight - 10) {
+                    top = window.innerHeight - tooltipRect.height - 10;
+                }
+
+                tooltip.style.left = left + 'px';
+                tooltip.style.top = top + 'px';
+
+                this.activeTooltip = tooltip;
+            } catch (err) {
+                // Silent fail
+            }
         },
 
         /**
