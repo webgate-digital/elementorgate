@@ -1,0 +1,192 @@
+/**
+ * ElementorGate Admin Settings Styles
+ * Accent: #FAD4DB | Base: #1b2241
+ */
+
+.egate-settings-wrap {
+    max-width: 1200px;
+    margin: 20px 20px 20px 0;
+}
+
+.egate-settings-wrap > h1 {
+    font-size: 23px;
+    font-weight: 400;
+    margin: 0 0 10px 0;
+    padding: 9px 0 4px 0;
+    color: #1b2241;
+}
+
+.egate-settings-wrap > p {
+    color: #50575e;
+    font-size: 14px;
+    margin: 0 0 20px 0;
+}
+
+/* Features Grid */
+.egate-features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+/* Feature Card */
+.egate-feature-card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 24px;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.egate-feature-card:hover {
+    border-color: #1b2241;
+    box-shadow: 0 4px 12px rgba(27, 34, 65, 0.08);
+}
+
+.egate-feature-card.is-enabled {
+    border-color: #1b2241;
+    background: linear-gradient(180deg, rgba(250, 212, 219, 0.15) 0%, #fff 100%);
+}
+
+.egate-feature-card.is-enabled::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: #1b2241;
+    border-radius: 8px 8px 0 0;
+}
+
+.egate-feature-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.egate-feature-header .dashicons {
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+    color: #1b2241;
+}
+
+.egate-feature-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #1b2241;
+}
+
+.egate-feature-description {
+    color: #50575e;
+    font-size: 13px;
+    line-height: 1.5;
+    margin: 0 0 16px 0;
+}
+
+/* Toggle Switch */
+.egate-feature-toggle {
+    margin-top: auto;
+}
+
+.egate-toggle {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+}
+
+.egate-toggle input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.egate-toggle-slider {
+    position: relative;
+    width: 48px;
+    height: 26px;
+    background: #ccc;
+    border-radius: 26px;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+.egate-toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background: #fff;
+    border-radius: 50%;
+    top: 3px;
+    left: 3px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.egate-toggle input:checked + .egate-toggle-slider {
+    background: #1b2241;
+}
+
+.egate-toggle input:checked + .egate-toggle-slider::before {
+    transform: translateX(22px);
+}
+
+.egate-toggle input:focus + .egate-toggle-slider {
+    box-shadow: 0 0 0 2px rgba(27, 34, 65, 0.2);
+}
+
+.egate-toggle-label {
+    font-size: 13px;
+    color: #50575e;
+    font-weight: 500;
+}
+
+.egate-toggle input:checked ~ .egate-toggle-label {
+    color: #1b2241;
+}
+
+/* Settings Footer */
+.egate-settings-footer {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.egate-settings-footer .button-primary {
+    background: #1b2241;
+    border-color: #1b2241;
+    color: #FAD4DB;
+    padding: 6px 24px;
+    height: auto;
+    font-size: 14px;
+}
+
+.egate-settings-footer .button-primary:hover,
+.egate-settings-footer .button-primary:focus {
+    background: #2a3456;
+    border-color: #2a3456;
+    color: #FAD4DB;
+}
+
+/* Responsive */
+@media (max-width: 782px) {
+    .egate-settings-wrap {
+        margin: 10px;
+    }
+
+    .egate-features-grid {
+        grid-template-columns: 1fr;
+    }
+}

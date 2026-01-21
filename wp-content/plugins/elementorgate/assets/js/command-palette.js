@@ -11,6 +11,7 @@
         listElement: null,
         selectedIndex: 0,
         filteredCommands: [],
+        initialized: false,
 
         // Command definitions
         commands: [
@@ -83,6 +84,9 @@
          * Initialize the command palette
          */
         init: function () {
+            if (this.initialized) return;
+            this.initialized = true;
+
             this.createElements();
             this.bindEvents();
         },
@@ -122,6 +126,24 @@
          */
         bindEvents: function () {
             const self = this;
+
+            // Keyboard shortcut handler
+            function handleShortcut(e) {
+                if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                    self.toggle();
+                    return false;
+                }
+            }
+
+            // Listen on main document (capture phase)
+            window.addEventListener('keydown', handleShortcut, true);
+            document.addEventListener('keydown', handleShortcut, true);
+
+            // Also listen on Elementor's preview iframe when it loads
+            this.attachToIframe();
 
             // Input events
             this.inputElement.addEventListener('input', () => {
@@ -328,7 +350,11 @@
             this.element.classList.add('efsp-command-palette--open');
             this.inputElement.value = '';
             this.filterCommands('');
-            this.inputElement.focus();
+
+            // Focus with a small delay to ensure element is visible
+            setTimeout(() => {
+                this.inputElement.focus();
+            }, 10);
         },
 
         /**
@@ -370,15 +396,54 @@
          */
         removeCommand: function (commandId) {
             this.commands = this.commands.filter(cmd => cmd.id !== commandId);
+        },
+
+        /**
+         * Attach keyboard listener to Elementor's preview iframe
+         */
+        attachToIframe: function () {
+            const self = this;
+
+            function handleShortcut(e) {
+                if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                    self.toggle();
+                    return false;
+                }
+            }
+
+            function tryAttach() {
+                const iframe = document.getElementById('elementor-preview-iframe');
+                if (iframe && iframe.contentDocument) {
+                    iframe.contentDocument.addEventListener('keydown', handleShortcut, true);
+                    iframe.contentWindow.addEventListener('keydown', handleShortcut, true);
+                }
+            }
+
+            // Try immediately
+            tryAttach();
+
+            // Also try when Elementor signals preview is loaded
+            if (window.elementor) {
+                window.elementor.on('preview:loaded', tryAttach);
+            }
+
+            // Fallback: observe for iframe
+            const observer = new MutationObserver(function(mutations) {
+                tryAttach();
+            });
+            observer.observe(document.body, { childList: true, subtree: true });
+
+            // Also try after a delay
+            setTimeout(tryAttach, 1000);
+            setTimeout(tryAttach, 3000);
         }
     };
 
-    // Initialize when DOM is ready
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => CommandPalette.init());
-    } else {
-        CommandPalette.init();
-    }
+    // Initialize immediately - the script is loaded in the editor context
+    CommandPalette.init();
 
     // Expose to global scope
     window.commandPalette = CommandPalette;

@@ -1,9 +1,9 @@
 <?php
 
 /**
- * Plugin Name: Elementorgate
+ * Plugin Name: ElementorGate
  * Description: A collection of power tools for Elementor Editor
- * Version: 0.0.2
+ * Version: 0.0.3
  * Author: Webgate
  * Author URI: https://webgate.digital
  * Text Domain: elementorgate
@@ -15,10 +15,13 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('EGATE_VERSION', '0.0.2');
+define('EGATE_VERSION', '0.0.3');
 define('EGATE_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('EGATE_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('EGATE_PLUGIN_FILE', __FILE__);
+
+// Load Settings class (always available for admin)
+require_once EGATE_PLUGIN_DIR . 'includes/class-settings.php';
 
 /**
  * Main Plugin Class
@@ -32,6 +35,11 @@ final class Elementorgate
      */
     private $modules = [];
 
+    /**
+     * Settings instance
+     */
+    private $settings = null;
+
     public static function get_instance()
     {
         if (null === self::$instance) {
@@ -42,6 +50,9 @@ final class Elementorgate
 
     private function __construct()
     {
+        // Initialize settings
+        $this->settings = EGATE_Settings::get_instance();
+
         add_action('plugins_loaded', [$this, 'init']);
     }
 
@@ -53,17 +64,27 @@ final class Elementorgate
         }
 
         $this->load_modules();
-        add_action('elementor/editor/before_enqueue_scripts', [$this, 'enqueue_editor_assets']);
+        add_action('elementor/editor/after_enqueue_scripts', [$this, 'enqueue_editor_assets']);
     }
 
     /**
-     * Load all modules
+     * Load all modules based on settings
      */
     private function load_modules()
     {
         // Template Previews Module
-        require_once EGATE_PLUGIN_DIR . 'modules/template-previews/template-previews.php';
-        $this->modules['template-previews'] = EGATE_Template_Previews::get_instance();
+        if ($this->settings->is_feature_enabled('template_previews')) {
+            require_once EGATE_PLUGIN_DIR . 'modules/template-previews/template-previews.php';
+            $this->modules['template-previews'] = EGATE_Template_Previews::get_instance();
+        }
+    }
+
+    /**
+     * Get settings instance
+     */
+    public function get_settings()
+    {
+        return $this->settings;
     }
 
     /**
@@ -76,25 +97,33 @@ final class Elementorgate
 
     public function enqueue_editor_assets()
     {
-        wp_enqueue_script(
-            'egate-typography-preview',
-            EGATE_PLUGIN_URL . 'assets/js/typography-preview.js',
-            ['jquery'],
-            EGATE_VERSION,
-            true
-        );
+        // Font Size Previews
+        if ($this->settings->is_feature_enabled('font_size_previews')) {
+            wp_enqueue_script(
+                'egate-typography-preview',
+                EGATE_PLUGIN_URL . 'assets/js/typography-preview.js',
+                ['jquery'],
+                EGATE_VERSION,
+                true
+            );
+        }
 
+        // Editor Toolbar (Command Palette)
+        if ($this->settings->is_feature_enabled('editor_toolbar')) {
+            wp_enqueue_script(
+                'egate-command-palette',
+                EGATE_PLUGIN_URL . 'assets/js/command-palette.js',
+                [],
+                EGATE_VERSION,
+                true
+            );
+        }
+
+
+        // Always load these utilities (they support other features)
         wp_enqueue_script(
             'egate-element-tools',
             EGATE_PLUGIN_URL . 'assets/js/element-tools.js',
-            [],
-            EGATE_VERSION,
-            true
-        );
-
-        wp_enqueue_script(
-            'egate-command-palette',
-            EGATE_PLUGIN_URL . 'assets/js/command-palette.js',
             [],
             EGATE_VERSION,
             true
@@ -128,7 +157,7 @@ final class Elementorgate
     {
 ?>
         <div class="notice notice-warning is-dismissible">
-            <p><?php esc_html_e('Elementorgate requires Elementor to be installed and activated.', 'elementorgate'); ?></p>
+            <p><?php esc_html_e('ElementorGate requires Elementor to be installed and activated.', 'elementorgate'); ?></p>
         </div>
 <?php
     }
