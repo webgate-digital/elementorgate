@@ -12,6 +12,7 @@
         selectedIndex: 0,
         filteredCommands: [],
         initialized: false,
+        storageKey: 'elementorgate_command_usage',
 
         // Command definitions
         commands: [
@@ -63,6 +64,17 @@
                 isActive: () => window.KeyboardNavigation?.isEnabled || false,
                 action: function() {
                     window.KeyboardNavigation?.toggle();
+                }
+            },
+            {
+                id: 'toggle-css-ids',
+                label: 'CSS Classes & IDs',
+                category: 'Tools',
+                icon: 'eicon-code',
+                toggle: true,
+                isActive: () => window.CssIdVisualizer?.isActive || false,
+                action: function() {
+                    window.CssIdVisualizer?.toggle();
                 }
             },
             { id: 'log-selected', label: 'Log Selected Element', category: 'Tools', icon: 'eicon-info-circle', action: () => window.getSelected?.() },
@@ -213,13 +225,18 @@
             const lowerQuery = query.toLowerCase().trim();
 
             if (!lowerQuery) {
-                this.filteredCommands = [...this.commands];
+                // Show recent/most used commands first when no search query
+                this.filteredCommands = this.getCommandsSortedByUsage();
             } else {
-                this.filteredCommands = this.commands.filter(cmd => {
-                    return cmd.label.toLowerCase().includes(lowerQuery) ||
-                           cmd.category.toLowerCase().includes(lowerQuery) ||
-                           cmd.id.toLowerCase().includes(lowerQuery);
-                });
+                // When searching, search through all commands and sort matches by usage
+                const usage = this.getUsageData();
+                this.filteredCommands = this.commands
+                    .filter(cmd => {
+                        return cmd.label.toLowerCase().includes(lowerQuery) ||
+                               cmd.category.toLowerCase().includes(lowerQuery) ||
+                               cmd.id.toLowerCase().includes(lowerQuery);
+                    })
+                    .sort((a, b) => (usage[b.id] || 0) - (usage[a.id] || 0));
             }
 
             this.selectedIndex = 0;
@@ -326,11 +343,72 @@
         },
 
         /**
+         * Get usage data from localStorage
+         */
+        getUsageData: function () {
+            try {
+                const data = localStorage.getItem(this.storageKey);
+                return data ? JSON.parse(data) : {};
+            } catch (e) {
+                return {};
+            }
+        },
+
+        /**
+         * Save usage data to localStorage
+         */
+        saveUsageData: function (data) {
+            try {
+                localStorage.setItem(this.storageKey, JSON.stringify(data));
+            } catch (e) {
+                // Silent fail
+            }
+        },
+
+        /**
+         * Track command usage
+         */
+        trackUsage: function (commandId) {
+            const data = this.getUsageData();
+            data[commandId] = (data[commandId] || 0) + 1;
+            this.saveUsageData(data);
+        },
+
+        /**
+         * Get commands sorted by usage (most used first)
+         */
+        getCommandsSortedByUsage: function () {
+            const usage = this.getUsageData();
+            const recentCommands = [];
+            const otherCommands = [];
+
+            this.commands.forEach(cmd => {
+                if (usage[cmd.id] && usage[cmd.id] > 0) {
+                    recentCommands.push({ ...cmd, usageCount: usage[cmd.id] });
+                } else {
+                    otherCommands.push(cmd);
+                }
+            });
+
+            // Sort recent by usage count (descending)
+            recentCommands.sort((a, b) => b.usageCount - a.usageCount);
+
+            // Mark recent commands with a different category for display
+            recentCommands.forEach(cmd => {
+                cmd.originalCategory = cmd.category;
+                cmd.category = 'Recent';
+            });
+
+            return [...recentCommands, ...otherCommands];
+        },
+
+        /**
          * Execute a command by ID
          */
         executeCommand: function (commandId) {
             const command = this.commands.find(cmd => cmd.id === commandId);
             if (command && command.action) {
+                this.trackUsage(commandId);
                 this.close();
                 try {
                     command.action();

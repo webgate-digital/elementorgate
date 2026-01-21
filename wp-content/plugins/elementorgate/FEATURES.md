@@ -58,6 +58,7 @@ Quick command palette for common actions.
 - Heading Structure — Visualize H1-H6 hierarchy on the page
 - Spacing Measure — Display margin/padding values on elements
 - Keyboard Navigation — Enable arrow key navigation between elements
+- CSS Classes & IDs — Show custom CSS classes and IDs on elements
 - Log Selected Element — Output selected element data to console (debug)
 
 **Document**
@@ -82,3 +83,18 @@ Navigate between elements using keyboard shortcuts.
 - `Option + →` — Go to first child
 
 **Toggle:** Via command palette (Cmd+K) → "Keyboard Navigation"
+
+---
+
+### CSS Classes & IDs Visualizer
+
+Display custom CSS classes and IDs added to elements directly in the editor.
+
+**Toggle:** Via command palette (Cmd+K) → "CSS Classes & IDs"
+
+**What it shows:**
+- Purple label: Custom CSS ID (`#my-element`)
+- Cyan label: Custom CSS classes (`.my-class .another-class`)
+- Dashed outline on elements with custom CSS
+
+**Where to set CSS ID/Class:** Elementor Editor → Select element → Advanced tab → CSS ID / CSS Classes
