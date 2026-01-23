@@ -2,13 +2,19 @@
 
 /**
  * Plugin Name: ElementorGate
+ * Plugin URI: https://webgate.digital/
  * Description: A collection of power tools for Elementor Editor
  * Version: 0.0.3
  * Author: Webgate
  * Author URI: https://webgate.digital
+ * License: GPL v2 or later
+ * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: elementorgate
+ * Domain Path: /languages
  * Requires at least: 6.0
+ * Tested up to: 6.5
  * Requires PHP: 7.4
+ * Network: false
  */
 
 if (!defined('ABSPATH')) {
@@ -19,6 +25,23 @@ define('EGATE_VERSION', '0.0.3');
 define('EGATE_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('EGATE_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('EGATE_PLUGIN_FILE', __FILE__);
+
+// Initialize Plugin Update Checker for GitHub releases
+require_once EGATE_PLUGIN_DIR . 'plugin-update-checker-5.6/load-v5p6.php';
+
+use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
+
+$elementorgate_update_checker = PucFactory::buildUpdateChecker(
+    'https://github.com/webgate-digital/elementorgate/',
+    __FILE__,
+    'elementorgate'
+);
+
+// Set the branch that contains the stable release
+$elementorgate_update_checker->setBranch('main');
+
+// Enable release assets - this makes it download the zip from GitHub releases
+$elementorgate_update_checker->getVcsApi()->enableReleaseAssets();
 
 // Load Settings class (always available for admin)
 require_once EGATE_PLUGIN_DIR . 'includes/class-settings.php';
