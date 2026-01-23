@@ -1018,11 +1018,11 @@
                     50% { opacity: 0.5; }
                 }
 
-                .efsp-heading-toc__item--h2 { padding-left: 28px !important; }
-                .efsp-heading-toc__item--h3 { padding-left: 42px !important; }
-                .efsp-heading-toc__item--h4 { padding-left: 56px !important; }
-                .efsp-heading-toc__item--h5 { padding-left: 70px !important; }
-                .efsp-heading-toc__item--h6 { padding-left: 84px !important; }
+                .efsp-floating-panel__item.efsp-heading-toc__item--h2 { padding-left: 28px !important; }
+                .efsp-floating-panel__item.efsp-heading-toc__item--h3 { padding-left: 42px !important; }
+                .efsp-floating-panel__item.efsp-heading-toc__item--h4 { padding-left: 56px !important; }
+                .efsp-floating-panel__item.efsp-heading-toc__item--h5 { padding-left: 70px !important; }
+                .efsp-floating-panel__item.efsp-heading-toc__item--h6 { padding-left: 84px !important; }
 
                 .efsp-heading-toc__indicator {
                     flex-shrink: 0 !important;

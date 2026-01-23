@@ -75,6 +75,17 @@
                     window.CssIdVisualizer?.toggle();
                 }
             },
+            {
+                id: 'toggle-global-styles',
+                label: 'Global Styles Usage',
+                category: 'Tools',
+                icon: 'eicon-paint-brush',
+                toggle: true,
+                isActive: () => window.GlobalStylesVisualizer?.isActive || false,
+                action: function() {
+                    window.GlobalStylesVisualizer?.toggle();
+                }
+            },
             { id: 'log-selected', label: 'Log Selected Element', category: 'Tools', icon: 'eicon-info-circle', action: () => window.getSelected?.() },
 
             // Settings
