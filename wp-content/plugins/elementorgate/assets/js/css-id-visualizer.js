@@ -166,82 +166,9 @@
                     50% { outline-offset: 4px; }
                 }
 
-                /* Panel Styles */
-                .efsp-css-panel {
-                    position: fixed !important;
-                    top: 20px !important;
-                    right: 20px !important;
-                    width: 320px !important;
-                    max-height: 80vh !important;
-                    background: #1e1f21 !important;
-                    border: 1px solid #404349 !important;
-                    border-radius: 8px !important;
-                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
-                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-                    z-index: 100000 !important;
-                    display: flex !important;
-                    flex-direction: column !important;
-                }
-                .efsp-css-panel__header {
-                    display: flex !important;
-                    justify-content: space-between !important;
-                    align-items: center !important;
-                    padding: 12px 14px !important;
-                    border-bottom: 1px solid #404349 !important;
-                    font-size: 13px !important;
-                    font-weight: 600 !important;
-                    color: #e0e1e3 !important;
-                }
-                .efsp-css-panel__close {
-                    cursor: pointer !important;
-                    font-size: 18px !important;
-                    color: #9da5ae !important;
-                    line-height: 1 !important;
-                }
-                .efsp-css-panel__close:hover {
-                    color: #e0e1e3 !important;
-                }
-                .efsp-css-panel__summary {
-                    display: flex !important;
-                    gap: 8px !important;
-                    padding: 10px 14px !important;
-                    border-bottom: 1px solid #404349 !important;
-                    background: #26292c !important;
-                }
-                .efsp-css-panel__count {
-                    font-size: 10px !important;
-                    font-weight: 600 !important;
-                    padding: 3px 8px !important;
-                    border-radius: 3px !important;
-                    color: #fff !important;
-                }
-                .efsp-css-panel__count--id {
-                    background: ${this.colors.id} !important;
-                }
-                .efsp-css-panel__count--class {
-                    background: ${this.colors.class} !important;
-                }
-                .efsp-css-panel__list {
-                    flex: 1 !important;
-                    overflow-y: auto !important;
-                    padding: 8px 0 !important;
-                }
-                .efsp-css-panel__empty {
-                    padding: 20px 14px !important;
-                    text-align: center !important;
-                    color: #9da5ae !important;
-                    font-size: 12px !important;
-                }
+                /* Panel-specific Styles (extends FloatingPanel) */
                 .efsp-css-panel__item {
-                    display: flex !important;
                     align-items: flex-start !important;
-                    gap: 8px !important;
-                    padding: 8px 14px !important;
-                    cursor: pointer !important;
-                    transition: background 0.15s !important;
-                }
-                .efsp-css-panel__item:hover {
-                    background: rgba(255, 255, 255, 0.05) !important;
                 }
                 .efsp-css-panel__item--depth-1 { padding-left: 28px !important; }
                 .efsp-css-panel__item--depth-2 { padding-left: 42px !important; }
@@ -371,45 +298,46 @@
         createPanel: function (items) {
             if (!this.previewDoc) return;
 
-            const panel = this.previewDoc.createElement('div');
-            panel.id = 'efsp-css-panel';
-            panel.className = 'efsp-css-panel';
-
-            // Header
-            const header = this.previewDoc.createElement('div');
-            header.className = 'efsp-css-panel__header';
-            header.innerHTML = '<span>CSS Classes & IDs</span><span class="efsp-css-panel__close">×</span>';
-            panel.appendChild(header);
-
-            // Close button handler
             const self = this;
-            header.querySelector('.efsp-css-panel__close').addEventListener('click', () => {
-                self.toggle(false);
+
+            // Use FloatingPanel utility
+            const panel = window.FloatingPanel.create(this.previewDoc, {
+                id: 'efsp-css-panel',
+                title: 'CSS Classes & IDs',
+                onClose: () => self.toggle(false),
+                onRefresh: () => self.refresh()
             });
+
+            // Add custom width
+            panel.style.setProperty('width', '320px', 'important');
 
             // Summary
             const idCount = items.filter(i => i.cssId).length;
             const classCount = items.filter(i => i.cssClasses).length;
 
-            const summary = this.previewDoc.createElement('div');
-            summary.className = 'efsp-css-panel__summary';
-            summary.innerHTML = `
-                <span class="efsp-css-panel__count efsp-css-panel__count--id">IDs: ${idCount}</span>
-                <span class="efsp-css-panel__count efsp-css-panel__count--class">Classes: ${classCount}</span>
-            `;
-            panel.appendChild(summary);
+            const summary = window.FloatingPanel.addSection(
+                this.previewDoc,
+                panel,
+                'efsp-floating-panel__summary efsp-css-panel__summary',
+                `<span class="efsp-floating-panel__count efsp-css-panel__count--id" style="background: ${this.colors.id} !important; color: #fff !important;">IDs: ${idCount}</span>
+                 <span class="efsp-floating-panel__count efsp-css-panel__count--class" style="background: ${this.colors.class} !important; color: #fff !important;">Classes: ${classCount}</span>`
+            );
 
             // List
-            const list = this.previewDoc.createElement('div');
-            list.className = 'efsp-css-panel__list';
+            const list = window.FloatingPanel.addSection(
+                this.previewDoc,
+                panel,
+                'efsp-floating-panel__list efsp-css-panel__list',
+                ''
+            );
 
             if (items.length === 0) {
-                list.innerHTML = '<div class="efsp-css-panel__empty">No custom CSS IDs or classes found.<br>Add them in Advanced tab → CSS ID / CSS Classes</div>';
+                list.innerHTML = '<div class="efsp-floating-panel__empty">No custom CSS IDs or classes found.<br>Add them in Advanced tab → CSS ID / CSS Classes</div>';
             } else {
                 items.forEach(item => {
                     const itemEl = this.previewDoc.createElement('div');
                     const depthClass = item.depth > 0 ? ` efsp-css-panel__item--depth-${Math.min(item.depth, 5)}` : '';
-                    itemEl.className = `efsp-css-panel__item${depthClass}`;
+                    itemEl.className = `efsp-floating-panel__item efsp-css-panel__item${depthClass}`;
                     itemEl.dataset.targetId = item.id;
 
                     let valuesHtml = '';
@@ -453,7 +381,6 @@
                 });
             }
 
-            panel.appendChild(list);
             this.previewDoc.body.appendChild(panel);
             this.panelElement = panel;
         },

@@ -783,11 +783,11 @@
             const tips = this.analyzeHeadings(items);
             if (tips.length > 0) {
                 const tipsContainer = doc.createElement('div');
-                tipsContainer.className = 'efsp-heading-toc__tips';
+                tipsContainer.className = 'efsp-floating-panel__tips';
                 tips.forEach(tip => {
                     const tipEl = doc.createElement('div');
-                    tipEl.className = `efsp-heading-toc__tip efsp-heading-toc__tip--${tip.type}`;
-                    tipEl.innerHTML = `<span class="efsp-heading-toc__tip-icon">${tip.type === 'error' ? '✕' : '!'}</span><span>${tip.message}</span>`;
+                    tipEl.className = `efsp-floating-panel__tip efsp-floating-panel__tip--${tip.type}`;
+                    tipEl.innerHTML = `<span class="efsp-floating-panel__tip-icon">${tip.type === 'error' ? '✕' : '!'}</span><span>${tip.message}</span>`;
                     tipsContainer.appendChild(tipEl);
                 });
                 toc.appendChild(tipsContainer);
@@ -795,7 +795,7 @@
 
             // Summary
             const summary = doc.createElement('div');
-            summary.className = 'efsp-heading-toc__summary';
+            summary.className = 'efsp-floating-panel__summary';
             const counts = {};
             items.forEach(item => {
                 counts[item.level] = (counts[item.level] || 0) + 1;
@@ -803,18 +803,18 @@
             summary.innerHTML = Object.entries(counts)
                 .map(([level, count]) => {
                     const isWarning = level === 'h1' && count > 1;
-                    return `<span class="efsp-heading-toc__count ${isWarning ? 'efsp-heading-toc__count--warning' : ''}" style="--count-color: ${this.colors[level]}">${level.toUpperCase()}: ${count}</span>`;
+                    return `<span class="efsp-floating-panel__count efsp-heading-toc__count ${isWarning ? 'efsp-heading-toc__count--warning' : ''}" style="color: ${this.colors[level]} !important; border: 1px solid ${this.colors[level]} !important;">${level.toUpperCase()}: ${count}</span>`;
                 })
                 .join('');
             toc.appendChild(summary);
 
             // Items list
             const list = doc.createElement('div');
-            list.className = 'efsp-heading-toc__list';
+            list.className = 'efsp-floating-panel__list';
 
             items.forEach((item) => {
                 const tocItem = doc.createElement('div');
-                tocItem.className = `efsp-heading-toc__item efsp-heading-toc__item--${item.level}`;
+                tocItem.className = `efsp-floating-panel__item efsp-heading-toc__item--${item.level}`;
                 tocItem.dataset.targetId = item.id;
 
                 const indicator = doc.createElement('span');
@@ -865,60 +865,6 @@
         },
 
         /**
-         * Make an element draggable by a handle
-         */
-        makeDraggable: function (element, handle, doc) {
-            let isDragging = false;
-            let offsetX = 0;
-            let offsetY = 0;
-
-            handle.addEventListener('mousedown', (e) => {
-                // Don't drag if clicking on buttons
-                if (e.target.closest('.efsp-heading-toc__actions')) {
-                    return;
-                }
-
-                isDragging = true;
-                const rect = element.getBoundingClientRect();
-                offsetX = e.clientX - rect.left;
-                offsetY = e.clientY - rect.top;
-
-                // Reset right/bottom positioning to use left/top (override !important)
-                element.style.setProperty('right', 'auto', 'important');
-                element.style.setProperty('bottom', 'auto', 'important');
-                element.style.setProperty('left', rect.left + 'px', 'important');
-                element.style.setProperty('top', rect.top + 'px', 'important');
-
-                handle.classList.add('efsp-heading-toc__header--dragging');
-                e.preventDefault();
-            });
-
-            doc.addEventListener('mousemove', (e) => {
-                if (!isDragging) return;
-
-                let newX = e.clientX - offsetX;
-                let newY = e.clientY - offsetY;
-
-                // Keep within viewport bounds
-                const maxX = doc.documentElement.clientWidth - element.offsetWidth;
-                const maxY = doc.documentElement.clientHeight - element.offsetHeight;
-
-                newX = Math.max(0, Math.min(newX, maxX));
-                newY = Math.max(0, Math.min(newY, maxY));
-
-                element.style.setProperty('left', newX + 'px', 'important');
-                element.style.setProperty('top', newY + 'px', 'important');
-            });
-
-            doc.addEventListener('mouseup', () => {
-                if (isDragging) {
-                    isDragging = false;
-                    handle.classList.remove('efsp-heading-toc__header--dragging');
-                }
-            });
-        },
-
-        /**
          * Refresh only the content inside the TOC (not the box itself)
          */
         refreshContent: function (doc) {
@@ -930,9 +876,9 @@
             const tocItems = this.scanHeadings(doc);
 
             // Remove old content (tips, summary, list) but keep header
-            const oldTips = toc.querySelector('.efsp-heading-toc__tips');
-            const oldSummary = toc.querySelector('.efsp-heading-toc__summary');
-            const oldList = toc.querySelector('.efsp-heading-toc__list');
+            const oldTips = toc.querySelector('.efsp-floating-panel__tips');
+            const oldSummary = toc.querySelector('.efsp-floating-panel__summary');
+            const oldList = toc.querySelector('.efsp-floating-panel__list');
             if (oldTips) oldTips.remove();
             if (oldSummary) oldSummary.remove();
             if (oldList) oldList.remove();
@@ -1000,28 +946,15 @@
         createTOC: function (doc, items) {
             this.removeTOC(doc);
 
-            const toc = doc.createElement('div');
-            toc.id = 'efsp-heading-toc';
-            toc.className = 'efsp-heading-toc';
+            const self = this;
 
-            // Header with refresh and close buttons
-            const header = doc.createElement('div');
-            header.className = 'efsp-heading-toc__header';
-            header.innerHTML = '<span>Heading Structure</span><div class="efsp-heading-toc__actions"><span class="efsp-heading-toc__refresh" title="Refresh">↻</span><span class="efsp-heading-toc__close" title="Close">×</span></div>';
-            toc.appendChild(header);
-
-            // Close button handler
-            header.querySelector('.efsp-heading-toc__close').addEventListener('click', () => {
-                this.toggle(false);
+            // Use FloatingPanel utility
+            const toc = window.FloatingPanel.create(doc, {
+                id: 'efsp-heading-toc',
+                title: 'Heading Structure',
+                onClose: () => self.toggle(false),
+                onRefresh: () => self.refreshContent(doc)
             });
-
-            // Refresh button handler
-            header.querySelector('.efsp-heading-toc__refresh').addEventListener('click', () => {
-                this.refreshContent(doc);
-            });
-
-            // Make draggable by header
-            this.makeDraggable(toc, header, doc);
 
             // Build TOC content (tips, summary, list)
             this.buildTOCContent(doc, toc, items);
@@ -1075,110 +1008,7 @@
                     50% { outline-offset: 6px; }
                 }
 
-                .efsp-heading-toc {
-                    position: fixed !important;
-                    top: 20px !important;
-                    right: 20px !important;
-                    width: 300px !important;
-                    max-height: 80vh !important;
-                    background: #1e1f21 !important;
-                    border: 1px solid #404349 !important;
-                    border-radius: 8px !important;
-                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
-                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-                    z-index: 100000 !important;
-                    display: flex !important;
-                    flex-direction: column !important;
-                }
-
-                .efsp-heading-toc__header {
-                    display: flex !important;
-                    justify-content: space-between !important;
-                    align-items: center !important;
-                    padding: 12px 14px !important;
-                    border-bottom: 1px solid #404349 !important;
-                    font-size: 13px !important;
-                    font-weight: 600 !important;
-                    color: #e0e1e3 !important;
-                    cursor: grab !important;
-                    user-select: none !important;
-                }
-
-                .efsp-heading-toc__header--dragging {
-                    cursor: grabbing !important;
-                }
-
-                .efsp-heading-toc__actions {
-                    display: flex !important;
-                    align-items: center !important;
-                    gap: 8px !important;
-                }
-
-                .efsp-heading-toc__refresh,
-                .efsp-heading-toc__close {
-                    cursor: pointer !important;
-                    font-size: 18px !important;
-                    color: #9da5ae !important;
-                    line-height: 1 !important;
-                }
-
-                .efsp-heading-toc__refresh:hover,
-                .efsp-heading-toc__close:hover {
-                    color: #e0e1e3 !important;
-                }
-
-                .efsp-heading-toc__tips {
-                    padding: 10px 14px !important;
-                    border-bottom: 1px solid #404349 !important;
-                    display: flex !important;
-                    flex-direction: column !important;
-                    gap: 6px !important;
-                }
-
-                .efsp-heading-toc__tip {
-                    display: flex !important;
-                    align-items: flex-start !important;
-                    gap: 8px !important;
-                    font-size: 11px !important;
-                    line-height: 1.4 !important;
-                    padding: 8px 10px !important;
-                    border-radius: 4px !important;
-                }
-
-                .efsp-heading-toc__tip--error {
-                    background: rgba(231, 76, 60, 0.15) !important;
-                    color: #e74c3c !important;
-                }
-
-                .efsp-heading-toc__tip--warning {
-                    background: rgba(241, 196, 15, 0.15) !important;
-                    color: #f1c40f !important;
-                }
-
-                .efsp-heading-toc__tip-icon {
-                    font-weight: 700 !important;
-                    flex-shrink: 0 !important;
-                }
-
-                .efsp-heading-toc__summary {
-                    display: flex !important;
-                    flex-wrap: wrap !important;
-                    gap: 6px !important;
-                    padding: 10px 14px !important;
-                    border-bottom: 1px solid #404349 !important;
-                    background: #26292c !important;
-                }
-
-                .efsp-heading-toc__count {
-                    font-size: 10px !important;
-                    font-weight: 600 !important;
-                    padding: 3px 8px !important;
-                    border-radius: 3px !important;
-                    background: rgba(255, 255, 255, 0.1) !important;
-                    color: var(--count-color) !important;
-                    border: 1px solid var(--count-color) !important;
-                }
-
+                /* Heading-specific panel styles (extends FloatingPanel) */
                 .efsp-heading-toc__count--warning {
                     animation: efsp-warning-pulse 1s ease-in-out infinite !important;
                 }
@@ -1186,25 +1016,6 @@
                 @keyframes efsp-warning-pulse {
                     0%, 100% { opacity: 1; }
                     50% { opacity: 0.5; }
-                }
-
-                .efsp-heading-toc__list {
-                    flex: 1 !important;
-                    overflow-y: auto !important;
-                    padding: 8px 0 !important;
-                }
-
-                .efsp-heading-toc__item {
-                    display: flex !important;
-                    align-items: center !important;
-                    gap: 8px !important;
-                    padding: 6px 14px !important;
-                    cursor: pointer !important;
-                    transition: background 0.15s !important;
-                }
-
-                .efsp-heading-toc__item:hover {
-                    background: rgba(255, 255, 255, 0.05) !important;
                 }
 
                 .efsp-heading-toc__item--h2 { padding-left: 28px !important; }
@@ -1230,7 +1041,7 @@
                     text-overflow: ellipsis !important;
                 }
 
-                .efsp-heading-toc__item:hover .efsp-heading-toc__text {
+                .efsp-floating-panel__item:hover .efsp-heading-toc__text {
                     color: #e0e1e3 !important;
                 }
             `;

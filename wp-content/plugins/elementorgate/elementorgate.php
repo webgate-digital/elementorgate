@@ -102,7 +102,7 @@ final class Elementorgate
             wp_enqueue_script(
                 'egate-typography-preview',
                 EGATE_PLUGIN_URL . 'assets/js/typography-preview.js',
-                ['jquery'],
+                ['jquery', 'egate-floating-panel'],
                 EGATE_VERSION,
                 true
             );
@@ -121,6 +121,14 @@ final class Elementorgate
 
 
         // Always load these utilities (they support other features)
+        wp_enqueue_script(
+            'egate-floating-panel',
+            EGATE_PLUGIN_URL . 'assets/js/floating-panel.js',
+            [],
+            EGATE_VERSION,
+            true
+        );
+
         wp_enqueue_script(
             'egate-element-tools',
             EGATE_PLUGIN_URL . 'assets/js/element-tools.js',
@@ -148,7 +156,7 @@ final class Elementorgate
         wp_enqueue_script(
             'egate-css-id-visualizer',
             EGATE_PLUGIN_URL . 'assets/js/css-id-visualizer.js',
-            [],
+            ['egate-floating-panel'],
             EGATE_VERSION,
             true
         );
