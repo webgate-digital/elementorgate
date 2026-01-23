@@ -711,7 +711,16 @@
                 doc.head.appendChild(styles);
             }
 
-            // Find all headings
+            // Scan headings and create TOC
+            const tocItems = this.scanHeadings(doc);
+            this.createTOC(doc, tocItems);
+        },
+
+        /**
+         * Scan all headings and add visualization
+         * @returns {Array} Array of TOC items
+         */
+        scanHeadings: function (doc) {
             const headings = doc.querySelectorAll('h1, h2, h3, h4, h5, h6');
             const tocItems = [];
 
@@ -747,68 +756,42 @@
                 });
             });
 
-            // Create TOC
-            this.createTOC(doc, tocItems);
-
-            // Count duplicates
-            const h1Count = doc.querySelectorAll('h1').length;
-            if (h1Count > 1) {
-                console.warn(`Warning: ${h1Count} H1 elements found. Consider having only one H1 per page.`);
-            }
+            return tocItems;
         },
 
         /**
-         * Hide heading visualization
+         * Clear heading visualizations from the document
          */
-        hide: function (doc) {
-            // Remove visualization from headings
+        clearHeadingVisualizations: function (doc) {
             const headings = doc.querySelectorAll('.efsp-heading-visualized');
             headings.forEach((heading) => {
                 heading.classList.remove('efsp-heading-visualized');
                 heading.style.removeProperty('--efsp-heading-color');
-
-                // Remove tag
                 const tag = heading.querySelector('.efsp-heading-tag');
-                if (tag) {
-                    tag.remove();
-                }
-
-                // Remove generated IDs
+                if (tag) tag.remove();
                 if (heading.id && heading.id.startsWith('efsp-heading-')) {
                     heading.removeAttribute('id');
                 }
             });
-
-            // Remove TOC
-            this.removeTOC(doc);
-
-            // Remove styles
-            const styles = doc.getElementById('efsp-heading-styles');
-            if (styles) {
-                styles.remove();
-            }
         },
 
         /**
-         * Create Table of Contents
+         * Build TOC content (tips, summary, list)
          */
-        createTOC: function (doc, items) {
-            this.removeTOC(doc);
-
-            const toc = doc.createElement('div');
-            toc.id = 'efsp-heading-toc';
-            toc.className = 'efsp-heading-toc';
-
-            // Header
-            const header = doc.createElement('div');
-            header.className = 'efsp-heading-toc__header';
-            header.innerHTML = '<span>Heading Structure</span><span class="efsp-heading-toc__close">×</span>';
-            toc.appendChild(header);
-
-            // Close button handler
-            header.querySelector('.efsp-heading-toc__close').addEventListener('click', () => {
-                this.toggle(false);
-            });
+        buildTOCContent: function (doc, toc, items) {
+            // Analyze headings and show tips
+            const tips = this.analyzeHeadings(items);
+            if (tips.length > 0) {
+                const tipsContainer = doc.createElement('div');
+                tipsContainer.className = 'efsp-heading-toc__tips';
+                tips.forEach(tip => {
+                    const tipEl = doc.createElement('div');
+                    tipEl.className = `efsp-heading-toc__tip efsp-heading-toc__tip--${tip.type}`;
+                    tipEl.innerHTML = `<span class="efsp-heading-toc__tip-icon">${tip.type === 'error' ? '✕' : '!'}</span><span>${tip.message}</span>`;
+                    tipsContainer.appendChild(tipEl);
+                });
+                toc.appendChild(tipsContainer);
+            }
 
             // Summary
             const summary = doc.createElement('div');
@@ -851,7 +834,6 @@
                     const target = doc.getElementById(item.id);
                     if (target) {
                         target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        // Highlight briefly
                         target.classList.add('efsp-heading-highlight');
                         setTimeout(() => {
                             target.classList.remove('efsp-heading-highlight');
@@ -863,6 +845,187 @@
             });
 
             toc.appendChild(list);
+        },
+
+        /**
+         * Hide heading visualization
+         */
+        hide: function (doc) {
+            // Remove visualization from headings
+            this.clearHeadingVisualizations(doc);
+
+            // Remove TOC
+            this.removeTOC(doc);
+
+            // Remove styles
+            const styles = doc.getElementById('efsp-heading-styles');
+            if (styles) {
+                styles.remove();
+            }
+        },
+
+        /**
+         * Make an element draggable by a handle
+         */
+        makeDraggable: function (element, handle, doc) {
+            let isDragging = false;
+            let offsetX = 0;
+            let offsetY = 0;
+
+            handle.addEventListener('mousedown', (e) => {
+                // Don't drag if clicking on buttons
+                if (e.target.closest('.efsp-heading-toc__actions')) {
+                    return;
+                }
+
+                isDragging = true;
+                const rect = element.getBoundingClientRect();
+                offsetX = e.clientX - rect.left;
+                offsetY = e.clientY - rect.top;
+
+                // Reset right/bottom positioning to use left/top (override !important)
+                element.style.setProperty('right', 'auto', 'important');
+                element.style.setProperty('bottom', 'auto', 'important');
+                element.style.setProperty('left', rect.left + 'px', 'important');
+                element.style.setProperty('top', rect.top + 'px', 'important');
+
+                handle.classList.add('efsp-heading-toc__header--dragging');
+                e.preventDefault();
+            });
+
+            doc.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+
+                let newX = e.clientX - offsetX;
+                let newY = e.clientY - offsetY;
+
+                // Keep within viewport bounds
+                const maxX = doc.documentElement.clientWidth - element.offsetWidth;
+                const maxY = doc.documentElement.clientHeight - element.offsetHeight;
+
+                newX = Math.max(0, Math.min(newX, maxX));
+                newY = Math.max(0, Math.min(newY, maxY));
+
+                element.style.setProperty('left', newX + 'px', 'important');
+                element.style.setProperty('top', newY + 'px', 'important');
+            });
+
+            doc.addEventListener('mouseup', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    handle.classList.remove('efsp-heading-toc__header--dragging');
+                }
+            });
+        },
+
+        /**
+         * Refresh only the content inside the TOC (not the box itself)
+         */
+        refreshContent: function (doc) {
+            const toc = doc.getElementById('efsp-heading-toc');
+            if (!toc) return;
+
+            // Clear old visualizations and re-scan
+            this.clearHeadingVisualizations(doc);
+            const tocItems = this.scanHeadings(doc);
+
+            // Remove old content (tips, summary, list) but keep header
+            const oldTips = toc.querySelector('.efsp-heading-toc__tips');
+            const oldSummary = toc.querySelector('.efsp-heading-toc__summary');
+            const oldList = toc.querySelector('.efsp-heading-toc__list');
+            if (oldTips) oldTips.remove();
+            if (oldSummary) oldSummary.remove();
+            if (oldList) oldList.remove();
+
+            // Build new content
+            this.buildTOCContent(doc, toc, tocItems);
+        },
+
+        /**
+         * Analyze heading structure and return tips
+         */
+        analyzeHeadings: function (items) {
+            const tips = [];
+            const counts = {};
+            const levels = [];
+
+            items.forEach(item => {
+                const levelNum = parseInt(item.level.charAt(1));
+                counts[item.level] = (counts[item.level] || 0) + 1;
+                levels.push(levelNum);
+            });
+
+            // Check for missing H1
+            if (!counts.h1 || counts.h1 === 0) {
+                tips.push({
+                    type: 'error',
+                    message: 'Missing H1 heading. Every page should have exactly one H1.'
+                });
+            }
+
+            // Check for multiple H1s
+            if (counts.h1 > 1) {
+                tips.push({
+                    type: 'error',
+                    message: `Multiple H1 headings (${counts.h1}). Use only one H1 per page.`
+                });
+            }
+
+            // Check for skipped levels
+            for (let i = 1; i < levels.length; i++) {
+                const diff = levels[i] - levels[i - 1];
+                if (diff > 1) {
+                    tips.push({
+                        type: 'warning',
+                        message: `Skipped heading level: H${levels[i - 1]} → H${levels[i]}. Don't skip levels.`
+                    });
+                    break; // Only show one skipped level warning
+                }
+            }
+
+            // Check if first heading is not H1
+            if (levels.length > 0 && levels[0] !== 1) {
+                tips.push({
+                    type: 'warning',
+                    message: `Page starts with H${levels[0]}. Consider starting with H1.`
+                });
+            }
+
+            return tips;
+        },
+
+        /**
+         * Create Table of Contents
+         */
+        createTOC: function (doc, items) {
+            this.removeTOC(doc);
+
+            const toc = doc.createElement('div');
+            toc.id = 'efsp-heading-toc';
+            toc.className = 'efsp-heading-toc';
+
+            // Header with refresh and close buttons
+            const header = doc.createElement('div');
+            header.className = 'efsp-heading-toc__header';
+            header.innerHTML = '<span>Heading Structure</span><div class="efsp-heading-toc__actions"><span class="efsp-heading-toc__refresh" title="Refresh">↻</span><span class="efsp-heading-toc__close" title="Close">×</span></div>';
+            toc.appendChild(header);
+
+            // Close button handler
+            header.querySelector('.efsp-heading-toc__close').addEventListener('click', () => {
+                this.toggle(false);
+            });
+
+            // Refresh button handler
+            header.querySelector('.efsp-heading-toc__refresh').addEventListener('click', () => {
+                this.refreshContent(doc);
+            });
+
+            // Make draggable by header
+            this.makeDraggable(toc, header, doc);
+
+            // Build TOC content (tips, summary, list)
+            this.buildTOCContent(doc, toc, items);
+
             doc.body.appendChild(toc);
             this.tocElement = toc;
         },
@@ -937,8 +1100,21 @@
                     font-size: 13px !important;
                     font-weight: 600 !important;
                     color: #e0e1e3 !important;
+                    cursor: grab !important;
+                    user-select: none !important;
                 }
 
+                .efsp-heading-toc__header--dragging {
+                    cursor: grabbing !important;
+                }
+
+                .efsp-heading-toc__actions {
+                    display: flex !important;
+                    align-items: center !important;
+                    gap: 8px !important;
+                }
+
+                .efsp-heading-toc__refresh,
                 .efsp-heading-toc__close {
                     cursor: pointer !important;
                     font-size: 18px !important;
@@ -946,8 +1122,42 @@
                     line-height: 1 !important;
                 }
 
+                .efsp-heading-toc__refresh:hover,
                 .efsp-heading-toc__close:hover {
                     color: #e0e1e3 !important;
+                }
+
+                .efsp-heading-toc__tips {
+                    padding: 10px 14px !important;
+                    border-bottom: 1px solid #404349 !important;
+                    display: flex !important;
+                    flex-direction: column !important;
+                    gap: 6px !important;
+                }
+
+                .efsp-heading-toc__tip {
+                    display: flex !important;
+                    align-items: flex-start !important;
+                    gap: 8px !important;
+                    font-size: 11px !important;
+                    line-height: 1.4 !important;
+                    padding: 8px 10px !important;
+                    border-radius: 4px !important;
+                }
+
+                .efsp-heading-toc__tip--error {
+                    background: rgba(231, 76, 60, 0.15) !important;
+                    color: #e74c3c !important;
+                }
+
+                .efsp-heading-toc__tip--warning {
+                    background: rgba(241, 196, 15, 0.15) !important;
+                    color: #f1c40f !important;
+                }
+
+                .efsp-heading-toc__tip-icon {
+                    font-weight: 700 !important;
+                    flex-shrink: 0 !important;
                 }
 
                 .efsp-heading-toc__summary {

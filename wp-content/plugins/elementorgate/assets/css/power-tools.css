@@ -168,7 +168,6 @@
     right: 0;
     bottom: 0;
     background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(4px);
 }
 
 .efsp-command-palette__modal {
@@ -183,18 +182,6 @@
     border-radius: 12px;
     box-shadow: 0 16px 70px rgba(0, 0, 0, 0.5);
     overflow: hidden;
-    animation: efsp-palette-enter 0.15s ease-out;
-}
-
-@keyframes efsp-palette-enter {
-    from {
-        opacity: 0;
-        transform: translateX(-50%) scale(0.95);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(-50%) scale(1);
-    }
 }
 
 /* Search Input */

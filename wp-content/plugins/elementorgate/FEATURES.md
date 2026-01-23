@@ -45,8 +45,8 @@ Quick command palette for common actions.
 **Available commands:**
 
 **Actions**
-- Wrap in Container — Wrap selected element(s) in a new container
-- Unwrap Container — Remove container and keep inner elements
+- Wrap in Container — Wrap selected element(s) in a new container (also: `Cmd+G` or right-click menu)
+- Unwrap Container — Remove container and keep inner elements (also: `Cmd+Shift+G` or right-click menu)
 - Duplicate / Delete / Copy / Paste — Standard element operations
 
 **View**
@@ -98,3 +98,22 @@ Display custom CSS classes and IDs added to elements directly in the editor.
 - Dashed outline on elements with custom CSS
 
 **Where to set CSS ID/Class:** Elementor Editor → Select element → Advanced tab → CSS ID / CSS Classes
+
+---
+
+### Wrap / Unwrap Container
+
+Quickly group elements into a container or ungroup them (like Figma's Group/Ungroup).
+
+**Access methods:**
+- **Keyboard:** `Cmd+G` (wrap) / `Cmd+Shift+G` (unwrap)
+- **Right-click menu:** Select element(s) → Right-click → "Wrap in Container" or "Unwrap Container"
+- **Command palette:** `Cmd+K` → search "wrap" or "unwrap"
+
+**Wrap in Container:**
+- Select one or more elements (must have the same parent)
+- Creates a new container and moves selected elements inside
+
+**Unwrap Container:**
+- Select a container
+- Moves all children out to parent level and deletes the empty container

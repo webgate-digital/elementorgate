@@ -472,4 +472,188 @@
         return ElementTools.unwrapContainer();
     };
 
+    /**
+     * Add items to Elementor's right-click context menu
+     * Uses MutationObserver to inject items when menu appears
+     */
+    function initContextMenu() {
+        // Create our menu items HTML
+        function createMenuGroup() {
+            const selected = window.elementor?.selection?.getElements() || [];
+            const isContainer = selected.length === 1 && selected[0].model?.get('elType') === 'container';
+
+            const group = document.createElement('div');
+            group.className = 'elementor-context-menu-list__group elementor-context-menu-list__group-elementorgate';
+            group.setAttribute('role', 'group');
+
+            // Wrap in Container item
+            const wrapItem = document.createElement('div');
+            wrapItem.className = 'elementor-context-menu-list__item elementor-context-menu-list__item-wrap_container';
+            wrapItem.setAttribute('role', 'menuitem');
+            wrapItem.setAttribute('tabindex', '0');
+            wrapItem.innerHTML = `
+                <div class="elementor-context-menu-list__item__icon"><i class="eicon-frame-expand"></i></div>
+                <div class="elementor-context-menu-list__item__title">Wrap in Container</div>
+                <div class="elementor-context-menu-list__item__shortcut">⌘G</div>
+            `;
+            wrapItem.addEventListener('click', function() {
+                ElementTools.wrapInContainer();
+                closeContextMenu();
+            });
+            group.appendChild(wrapItem);
+
+            // Unwrap Container item (only for containers)
+            if (isContainer) {
+                const unwrapItem = document.createElement('div');
+                unwrapItem.className = 'elementor-context-menu-list__item elementor-context-menu-list__item-unwrap_container';
+                unwrapItem.setAttribute('role', 'menuitem');
+                unwrapItem.setAttribute('tabindex', '0');
+                unwrapItem.innerHTML = `
+                    <div class="elementor-context-menu-list__item__icon"><i class="eicon-frame-minimize"></i></div>
+                    <div class="elementor-context-menu-list__item__title">Unwrap Container</div>
+                    <div class="elementor-context-menu-list__item__shortcut">⌘⇧G</div>
+                `;
+                unwrapItem.addEventListener('click', function() {
+                    ElementTools.unwrapContainer();
+                    closeContextMenu();
+                });
+                group.appendChild(unwrapItem);
+            }
+
+            return group;
+        }
+
+        function closeContextMenu() {
+            const menu = document.querySelector('.elementor-context-menu');
+            if (menu) {
+                menu.style.display = 'none';
+            }
+        }
+
+        function injectMenuItems(menu) {
+            // Check if already injected
+            if (menu.querySelector('.elementor-context-menu-list__group-elementorgate')) {
+                return;
+            }
+
+            const list = menu.querySelector('.elementor-context-menu-list');
+            if (!list) return;
+
+            // Find clipboard group to insert after
+            const clipboardGroup = list.querySelector('.elementor-context-menu-list__group-clipboard');
+            const menuGroup = createMenuGroup();
+
+            if (clipboardGroup && clipboardGroup.nextSibling) {
+                list.insertBefore(menuGroup, clipboardGroup.nextSibling);
+            } else if (clipboardGroup) {
+                clipboardGroup.parentNode.appendChild(menuGroup);
+            } else {
+                // Insert at the beginning if no clipboard group
+                list.insertBefore(menuGroup, list.firstChild);
+            }
+        }
+
+        // Watch for context menu appearing
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                mutation.addedNodes.forEach(function(node) {
+                    if (node.nodeType === 1) {
+                        // Check if this is the context menu
+                        if (node.classList && node.classList.contains('elementor-context-menu')) {
+                            injectMenuItems(node);
+                        }
+                        // Also check children
+                        const contextMenu = node.querySelector?.('.elementor-context-menu');
+                        if (contextMenu) {
+                            injectMenuItems(contextMenu);
+                        }
+                    }
+                });
+            });
+        });
+
+        observer.observe(document.body, { childList: true, subtree: true });
+
+        // Also check for existing menu (in case it's reused)
+        const existingMenu = document.querySelector('.elementor-context-menu');
+        if (existingMenu) {
+            // Re-inject when menu becomes visible
+            const menuObserver = new MutationObserver(function() {
+                if (existingMenu.style.display !== 'none' && existingMenu.offsetParent !== null) {
+                    // Remove old group first
+                    const oldGroup = existingMenu.querySelector('.elementor-context-menu-list__group-elementorgate');
+                    if (oldGroup) oldGroup.remove();
+                    injectMenuItems(existingMenu);
+                }
+            });
+            menuObserver.observe(existingMenu, { attributes: true, attributeFilter: ['style'] });
+        }
+    }
+
+    // Initialize context menu injection
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initContextMenu);
+    } else {
+        initContextMenu();
+    }
+
+    /**
+     * Add keyboard shortcut Cmd+G / Ctrl+G for wrap in container
+     */
+    function handleWrapShortcut(e) {
+        // Cmd+G (Mac) or Ctrl+G (Windows)
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'g' && !e.shiftKey && !e.altKey) {
+            // Don't interfere when typing in inputs
+            const activeElement = document.activeElement;
+            const isTextInput = activeElement && (
+                activeElement.tagName === 'INPUT' ||
+                activeElement.tagName === 'TEXTAREA' ||
+                activeElement.isContentEditable
+            );
+
+            if (isTextInput) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+            ElementTools.wrapInContainer();
+        }
+
+        // Cmd+Shift+G for unwrap
+        if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'g' && !e.altKey) {
+            const activeElement = document.activeElement;
+            const isTextInput = activeElement && (
+                activeElement.tagName === 'INPUT' ||
+                activeElement.tagName === 'TEXTAREA' ||
+                activeElement.isContentEditable
+            );
+
+            if (isTextInput) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+            ElementTools.unwrapContainer();
+        }
+    }
+
+    // Attach keyboard shortcut to main document
+    document.addEventListener('keydown', handleWrapShortcut, true);
+    window.addEventListener('keydown', handleWrapShortcut, true);
+
+    // Also attach to Elementor's preview iframe
+    function attachShortcutToIframe() {
+        const iframe = document.getElementById('elementor-preview-iframe');
+        if (iframe && iframe.contentDocument) {
+            iframe.contentDocument.addEventListener('keydown', handleWrapShortcut, true);
+            iframe.contentWindow.addEventListener('keydown', handleWrapShortcut, true);
+        } else {
+            setTimeout(attachShortcutToIframe, 500);
+        }
+    }
+
+    attachShortcutToIframe();
+
+    if (window.elementor) {
+        window.elementor.on('preview:loaded', attachShortcutToIframe);
+    }
+
 })();

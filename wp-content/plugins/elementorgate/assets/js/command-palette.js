@@ -29,8 +29,6 @@
             { id: 'responsive-desktop', label: 'Desktop View', category: 'View', icon: 'eicon-device-desktop', action: () => window.elementor?.changeDeviceMode('desktop') },
             { id: 'responsive-tablet', label: 'Tablet View', category: 'View', icon: 'eicon-device-tablet', action: () => window.elementor?.changeDeviceMode('tablet') },
             { id: 'responsive-mobile', label: 'Mobile View', category: 'View', icon: 'eicon-device-mobile', action: () => window.elementor?.changeDeviceMode('mobile') },
-            { id: 'preview', label: 'Preview Changes', category: 'View', icon: 'eicon-preview-medium', action: () => window.$e?.run('document/preview') },
-
             // Tools (Toggles)
             {
                 id: 'toggle-headings',
@@ -78,12 +76,6 @@
                 }
             },
             { id: 'log-selected', label: 'Log Selected Element', category: 'Tools', icon: 'eicon-info-circle', action: () => window.getSelected?.() },
-
-            // Document
-            { id: 'save', label: 'Save', category: 'Document', icon: 'eicon-save', action: () => window.$e?.run('document/save/default') },
-            { id: 'save-draft', label: 'Save as Draft', category: 'Document', icon: 'eicon-save', action: () => window.$e?.run('document/save/draft') },
-            { id: 'undo', label: 'Undo', category: 'Document', icon: 'eicon-undo', action: () => window.$e?.run('document/history/undo') },
-            { id: 'redo', label: 'Redo', category: 'Document', icon: 'eicon-redo', action: () => window.$e?.run('document/history/redo') },
 
             // Settings
             { id: 'page-settings', label: 'Page Settings', category: 'Settings', icon: 'eicon-cog', action: () => window.$e?.route('panel/page-settings/settings') },
@@ -375,31 +367,31 @@
         },
 
         /**
-         * Get commands sorted by usage (most used first)
+         * Get all commands with top 3 recent at the start
          */
         getCommandsSortedByUsage: function () {
             const usage = this.getUsageData();
-            const recentCommands = [];
-            const otherCommands = [];
 
-            this.commands.forEach(cmd => {
-                if (usage[cmd.id] && usage[cmd.id] > 0) {
-                    recentCommands.push({ ...cmd, usageCount: usage[cmd.id] });
-                } else {
-                    otherCommands.push(cmd);
-                }
-            });
+            // Get commands that have been used, sorted by usage count
+            const usedCommands = this.commands
+                .filter(cmd => usage[cmd.id] && usage[cmd.id] > 0)
+                .map(cmd => ({ ...cmd, usageCount: usage[cmd.id] }))
+                .sort((a, b) => b.usageCount - a.usageCount)
+                .slice(0, 3); // Max 3 recent items
 
-            // Sort recent by usage count (descending)
-            recentCommands.sort((a, b) => b.usageCount - a.usageCount);
-
-            // Mark recent commands with a different category for display
-            recentCommands.forEach(cmd => {
+            // Mark them as Recent
+            usedCommands.forEach(cmd => {
                 cmd.originalCategory = cmd.category;
                 cmd.category = 'Recent';
             });
 
-            return [...recentCommands, ...otherCommands];
+            // Get IDs of recent commands to exclude from main list
+            const recentIds = new Set(usedCommands.map(cmd => cmd.id));
+
+            // Get remaining commands in original order
+            const otherCommands = this.commands.filter(cmd => !recentIds.has(cmd.id));
+
+            return [...usedCommands, ...otherCommands];
         },
 
         /**
