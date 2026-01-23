@@ -903,9 +903,9 @@
             count.textContent = styleData.elements.length;
 
             item.appendChild(checkbox);
+            item.appendChild(eye);
             item.appendChild(icon);
             item.appendChild(info);
-            item.appendChild(eye);
             item.appendChild(count);
 
             // Apply dimmed state if another style is focused
