@@ -97,6 +97,17 @@
                     window.CustomCssVisualizer?.toggle();
                 }
             },
+            {
+                id: 'toggle-link-checker',
+                label: 'Link Checker',
+                category: 'Tools',
+                icon: 'eicon-editor-link',
+                toggle: true,
+                isActive: () => window.LinkCheckerVisualizer?.isActive || false,
+                action: function() {
+                    window.LinkCheckerVisualizer?.toggle();
+                }
+            },
             { id: 'log-selected', label: 'Log Selected Element', category: 'Tools', icon: 'eicon-info-circle', action: () => window.getSelected?.() },
 
             // Settings
