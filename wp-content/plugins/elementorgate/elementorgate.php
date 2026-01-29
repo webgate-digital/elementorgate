@@ -192,6 +192,14 @@ final class Elementorgate
             true
         );
 
+        wp_enqueue_script(
+            'egate-custom-css-visualizer',
+            EGATE_PLUGIN_URL . 'assets/js/custom-css-visualizer.js',
+            ['egate-floating-panel'],
+            EGATE_VERSION,
+            true
+        );
+
         wp_enqueue_style(
             'egate-styles',
             EGATE_PLUGIN_URL . 'assets/css/power-tools.css',

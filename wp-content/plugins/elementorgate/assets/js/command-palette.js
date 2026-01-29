@@ -86,6 +86,17 @@
                     window.GlobalStylesVisualizer?.toggle();
                 }
             },
+            {
+                id: 'toggle-custom-css',
+                label: 'Custom CSS',
+                category: 'Tools',
+                icon: 'eicon-code-highlight',
+                toggle: true,
+                isActive: () => window.CustomCssVisualizer?.isActive || false,
+                action: function() {
+                    window.CustomCssVisualizer?.toggle();
+                }
+            },
             { id: 'log-selected', label: 'Log Selected Element', category: 'Tools', icon: 'eicon-info-circle', action: () => window.getSelected?.() },
 
             // Settings

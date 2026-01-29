@@ -36,6 +36,8 @@ The plugin is mounted at `/wp-content/plugins/elementorgate` in the container fo
 | `css-id-visualizer.js` | Displays custom CSS classes/IDs as visual labels |
 | `typography-preview.js` | Hover tooltips showing global typography settings |
 | `spacing-measure.js` | Visual margin/padding display |
+| `global-styles-visualizer.js` | Shows where global colors/fonts are used with toggleable visibility |
+| `global-typography-creator.js` | POC: Creates global typography styles from JSON config via Kit document |
 
 ### Template Preview Module (modules/template-previews/)
 Standalone module with custom WordPress rewrite endpoint (`/template-preview/[id]`) for rendering Elementor templates with thumbnails.
@@ -50,3 +52,46 @@ Standalone module with custom WordPress rewrite endpoint (`/template-preview/[id
 - Scripts enqueued via `elementor/editor/after_enqueue_scripts` hook
 - Feature modules loaded conditionally based on settings
 - JSDoc comments used throughout JavaScript
+
+## Elementor API Patterns
+
+### Accessing Global Styles
+```javascript
+// Fetch all globals (colors, typography)
+const globals = await $e.data.get('globals/index');
+const typography = globals?.data?.typography || {};
+const colors = globals?.data?.colors || {};
+```
+
+### Kit Document (Site Settings)
+```javascript
+// Get kit document for modifying site-wide settings
+const docs = elementor.documents.getAll();
+for (const [id, doc] of Object.entries(docs)) {
+    if (doc?.config?.type === 'kit') {
+        const settings = doc.model.get('settings');
+        const systemTypography = settings.get('system_typography');
+    }
+}
+```
+
+### Applying Kit Settings
+```javascript
+// Apply changes to kit settings
+await $e.run('document/elements/settings', {
+    container: kitDocument.container,
+    settings: { system_typography: newTypographyArray },
+    options: { external: true }
+});
+```
+
+### Element Selection & Container Access
+```javascript
+// Get selected element
+const container = elementor.selection.getElements()[0];
+// Get element by ID from preview
+const container = elementor.getContainer(elementId);
+// Access element settings
+const settings = container.settings.attributes;
+const globals = container.globals?.attributes || {};
+```
