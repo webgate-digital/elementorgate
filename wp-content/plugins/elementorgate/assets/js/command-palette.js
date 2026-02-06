@@ -19,6 +19,7 @@
             // Actions
             { id: 'wrap', label: 'Wrap in Container', category: 'Actions', icon: 'eicon-frame-expand', action: () => window.elementorTools?.wrapInContainer() },
             { id: 'unwrap', label: 'Unwrap Container', category: 'Actions', icon: 'eicon-frame-minimize', action: () => window.elementorTools?.unwrapContainer() },
+            { id: 'copy-ai', label: 'Copy for AI', category: 'Actions', icon: 'eicon-ai', shortcut: '⌘⇧A', action: () => window.elementorTools?.copyForAI() },
             { id: 'duplicate', label: 'Duplicate Element', category: 'Actions', icon: 'eicon-clone', action: () => window.$e?.run('document/elements/duplicate', { container: window.elementor?.selection?.getElements()[0] }) },
             { id: 'delete', label: 'Delete Element', category: 'Actions', icon: 'eicon-trash', action: () => window.$e?.run('document/elements/delete', { container: window.elementor?.selection?.getElements()[0] }) },
             { id: 'copy', label: 'Copy Element', category: 'Actions', icon: 'eicon-copy', action: () => window.$e?.run('document/elements/copy', { container: window.elementor?.selection?.getElements()[0] }) },

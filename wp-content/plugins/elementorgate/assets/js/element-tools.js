@@ -379,6 +379,256 @@
         },
 
         /**
+         * Copy element context for AI assistance
+         * Copies HTML structure with rich context (styles, classes, IDs, hierarchy)
+         * @returns {Promise<string|null>} Context string or null on failure
+         */
+        copyForAI: async function () {
+            if (!this.isReady()) {
+                console.error('Elementor is not ready');
+                return null;
+            }
+
+            const containers = this.getSelectedContainers();
+            if (containers.length === 0) {
+                console.error('No elements selected');
+                return null;
+            }
+
+            const container = containers[0];
+            const elementId = container.model?.id || container.id;
+
+            // Build context
+            let context = '## Elementor Element Context\n\n';
+            context += '### Structure & Settings\n\n';
+            context += this.buildAIContext(container, 0);
+
+            // Add raw HTML
+            const domInfo = this.getDOMInfo(elementId);
+            if (domInfo && domInfo.outerHTML) {
+                context += '\n### Raw HTML\n\n```html\n';
+                context += domInfo.outerHTML;
+                context += '\n```\n';
+            }
+
+            // Copy to clipboard
+            try {
+                await navigator.clipboard.writeText(context);
+                console.log('Element context copied to clipboard!');
+
+                // Show notification
+                this.showNotification('Element context copied for AI');
+
+                return context;
+            } catch (error) {
+                console.error('Failed to copy to clipboard:', error);
+                console.log('Context output:\n', context);
+                return context;
+            }
+        },
+
+        /**
+         * Build AI context recursively for an element and its children
+         * @param {Object} container - Elementor container
+         * @param {number} depth - Current depth for indentation
+         * @returns {string} Formatted context string
+         */
+        buildAIContext: function (container, depth = 0) {
+            if (!container || !container.model) {
+                return '';
+            }
+
+            const indent = '  '.repeat(depth);
+            const settings = container.settings?.attributes || {};
+            const model = container.model;
+
+            // Basic element info
+            const elType = model.get('elType');
+            const widgetType = model.get('widgetType');
+            const elementId = model.id || container.id;
+
+            // Get custom CSS class and ID
+            const cssClasses = settings.css_classes || settings._css_classes || '';
+            const cssId = settings._element_id || settings.css_id || '';
+            const customCSS = settings.custom_css || '';
+
+            // Get element label/title
+            const label = this.getElementLabel(container);
+
+            // Build element header
+            let output = `${indent}┌─ ${elType}${widgetType ? ` (${widgetType})` : ''}: "${label}"\n`;
+            output += `${indent}│  ID: ${elementId}\n`;
+
+            // Add CSS classes if present
+            if (cssClasses) {
+                output += `${indent}│  CSS Classes: ${cssClasses}\n`;
+            }
+
+            // Add CSS ID if present
+            if (cssId) {
+                output += `${indent}│  CSS ID: #${cssId}\n`;
+            }
+
+            // Add custom CSS (full)
+            if (customCSS && customCSS.trim()) {
+                output += `${indent}│  ⚠️ Custom CSS:\n`;
+                const cssLines = customCSS.trim().split('\n');
+                cssLines.forEach(line => {
+                    output += `${indent}│     ${line}\n`;
+                });
+            }
+
+            // Add key settings based on element type
+            const keySettings = this.extractKeySettings(container, elType, widgetType);
+            if (keySettings.length > 0) {
+                output += `${indent}│  Settings:\n`;
+                keySettings.forEach(setting => {
+                    output += `${indent}│    - ${setting}\n`;
+                });
+            }
+
+            // Add global styles info
+            const globals = container.globals?.attributes || {};
+            const globalStyles = Object.entries(globals).filter(([key, value]) => value);
+            if (globalStyles.length > 0) {
+                output += `${indent}│  Global Styles:\n`;
+                globalStyles.forEach(([key, value]) => {
+                    output += `${indent}│    - ${key}: ${value}\n`;
+                });
+            }
+
+            // Get DOM element info if available
+            const domInfo = this.getDOMInfo(elementId);
+            if (domInfo) {
+                output += `${indent}│  DOM:\n`;
+                output += `${indent}│    - Tag: ${domInfo.tagName}\n`;
+                if (domInfo.computedClasses) {
+                    output += `${indent}│    - Rendered Classes: ${domInfo.computedClasses}\n`;
+                }
+            }
+
+            output += `${indent}└─\n`;
+
+            // Process children
+            if (container.children && container.children.length > 0) {
+                container.children.forEach(child => {
+                    output += this.buildAIContext(child, depth + 1);
+                });
+            }
+
+            return output;
+        },
+
+        /**
+         * Extract key settings based on element type
+         * @param {Object} container - Elementor container
+         * @param {string} elType - Element type
+         * @param {string} widgetType - Widget type
+         * @returns {Array} Array of key setting strings
+         */
+        extractKeySettings: function (container, elType, widgetType) {
+            const settings = container.settings?.attributes || {};
+            const keySettings = [];
+
+            // Container-specific settings
+            if (elType === 'container') {
+                if (settings.flex_direction) keySettings.push(`Direction: ${settings.flex_direction}`);
+                if (settings.flex_wrap) keySettings.push(`Wrap: ${settings.flex_wrap}`);
+                if (settings.content_width) keySettings.push(`Content Width: ${settings.content_width}`);
+                if (settings.flex_gap) keySettings.push(`Gap: ${JSON.stringify(settings.flex_gap)}`);
+            }
+
+            // Widget-specific settings
+            if (widgetType === 'heading') {
+                if (settings.title) keySettings.push(`Text: "${settings.title.substring(0, 50)}${settings.title.length > 50 ? '...' : ''}"`);
+                if (settings.header_size) keySettings.push(`Tag: ${settings.header_size}`);
+                if (settings.align) keySettings.push(`Align: ${settings.align}`);
+            } else if (widgetType === 'text-editor') {
+                const content = settings.editor || '';
+                const plainText = content.replace(/<[^>]*>/g, '').trim();
+                if (plainText) keySettings.push(`Content: "${plainText.substring(0, 80)}${plainText.length > 80 ? '...' : ''}"`);
+            } else if (widgetType === 'button') {
+                if (settings.text) keySettings.push(`Text: "${settings.text}"`);
+                if (settings.link?.url) keySettings.push(`Link: ${settings.link.url}`);
+                if (settings.button_type) keySettings.push(`Type: ${settings.button_type}`);
+            } else if (widgetType === 'image') {
+                if (settings.image?.url) keySettings.push(`Image: ${settings.image.url.split('/').pop()}`);
+                if (settings.image_size) keySettings.push(`Size: ${settings.image_size}`);
+            } else if (widgetType === 'icon') {
+                if (settings.selected_icon?.value) keySettings.push(`Icon: ${settings.selected_icon.value}`);
+            }
+
+            // Common style settings
+            if (settings.background_background) keySettings.push(`Background: ${settings.background_background}`);
+            if (settings._margin) keySettings.push(`Margin: ${JSON.stringify(settings._margin)}`);
+            if (settings._padding) keySettings.push(`Padding: ${JSON.stringify(settings._padding)}`);
+
+            return keySettings;
+        },
+
+        /**
+         * Get DOM information for an element
+         * @param {string} elementId - Elementor element ID
+         * @returns {Object|null} DOM info or null
+         */
+        getDOMInfo: function (elementId) {
+            try {
+                const iframe = document.getElementById('elementor-preview-iframe');
+                if (!iframe || !iframe.contentDocument) return null;
+
+                const element = iframe.contentDocument.querySelector(`[data-id="${elementId}"]`);
+                if (!element) return null;
+
+                return {
+                    tagName: element.tagName.toLowerCase(),
+                    computedClasses: element.className.split(' ').filter(c => !c.startsWith('elementor-')).join(' ') || null,
+                    outerHTML: element.outerHTML
+                };
+            } catch (e) {
+                return null;
+            }
+        },
+
+        /**
+         * Show a notification toast
+         * @param {string} message - Message to display
+         */
+        showNotification: function (message) {
+            // Use Elementor's notification if available
+            if (window.elementor?.notifications?.showToast) {
+                window.elementor.notifications.showToast({
+                    message: message,
+                    buttons: []
+                });
+                return;
+            }
+
+            // Fallback: create our own toast
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: #0c0d0e;
+                color: #fff;
+                padding: 12px 24px;
+                border-radius: 6px;
+                font-size: 13px;
+                z-index: 999999;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                transition: opacity 0.3s;
+            `;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 2000);
+        },
+
+        /**
          * Unwrap selected container - move children out and delete container
          * Similar to "Ungroup" in Figma
          * @returns {Promise<boolean>} Success status
@@ -472,6 +722,11 @@
         return ElementTools.unwrapContainer();
     };
 
+    // Copy element context for AI
+    window.copyForAI = function () {
+        return ElementTools.copyForAI();
+    };
+
     /**
      * Add items to Elementor's right-click context menu
      * Uses MutationObserver to inject items when menu appears
@@ -519,6 +774,22 @@
                 });
                 group.appendChild(unwrapItem);
             }
+
+            // Copy for AI item
+            const copyAIItem = document.createElement('div');
+            copyAIItem.className = 'elementor-context-menu-list__item elementor-context-menu-list__item-copy_ai';
+            copyAIItem.setAttribute('role', 'menuitem');
+            copyAIItem.setAttribute('tabindex', '0');
+            copyAIItem.innerHTML = `
+                <div class="elementor-context-menu-list__item__icon"><i class="eicon-ai"></i></div>
+                <div class="elementor-context-menu-list__item__title">Copy for AI</div>
+                <div class="elementor-context-menu-list__item__shortcut">⌘⇧A</div>
+            `;
+            copyAIItem.addEventListener('click', function() {
+                ElementTools.copyForAI();
+                closeContextMenu();
+            });
+            group.appendChild(copyAIItem);
 
             return group;
         }
@@ -632,6 +903,22 @@
             e.preventDefault();
             e.stopPropagation();
             ElementTools.unwrapContainer();
+        }
+
+        // Cmd+Shift+A for copy for AI
+        if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'a' && !e.altKey) {
+            const activeElement = document.activeElement;
+            const isTextInput = activeElement && (
+                activeElement.tagName === 'INPUT' ||
+                activeElement.tagName === 'TEXTAREA' ||
+                activeElement.isContentEditable
+            );
+
+            if (isTextInput) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+            ElementTools.copyForAI();
         }
     }
 
